@@ -15,7 +15,6 @@ XBTC token has the following features and functionalities:
 2. **Management Functions**:
    - Mint/Burn: Supports minting by admin and burning by designated users
    - Freeze/Unfreeze: Can freeze specific addresses, preventing transfers
-   - Blacklist: Can add addresses to a blacklist, completely restricting operations
    - Global Pause: Can pause all transfer operations as an emergency mechanism
 
 3. **Security Features**:
@@ -36,7 +35,7 @@ xbtc-aptos/
 
 ## Usage Guide
 
-### compile
+### Compile
 ```bash
 aptos move compile --named-addresses okx_xbtc=<address>
 ```
@@ -45,7 +44,7 @@ Example:
 aptos move compile --named-addresses okx_xbtc=0x13526c24d1785380dacb52ae6c242475e08ad7b5a8ecf324b2895e6790456732
 ```
 
-### deploy
+### Deploy
 ```bash
 aptos move deploy-object --address-name okx_xbtc
 ```
