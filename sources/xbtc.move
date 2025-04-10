@@ -59,7 +59,7 @@ module xbtc::xbtc {
         accounts: vector<address>
     }
 
-    /// Emitted when global pause is enabled
+    /// Emitted when global pause is enabled/disabled
     public struct PauseEvent has copy, drop {
         pauser: address,
         paused: bool,
@@ -103,7 +103,7 @@ module xbtc::xbtc {
             b"xBTC",                            // Symbol
             b"Regulated Bitcoin",               // Name
             b"A regulated Bitcoin representation on Sui with compliance features", // Description
-            option::none(),                     // Icon URL - can be updated later
+            option::none(),                     // Icon URL, will fixed when deployed
             true,                               // Allow global pause for emergencies
             ctx
         );
@@ -118,7 +118,9 @@ module xbtc::xbtc {
         // Transfer capabilities to the deployer
         transfer::public_transfer(treasury_cap, @minter);
         transfer::public_transfer(deny_cap, @denylister);
-        transfer::public_transfer(xbtc_receiver, @minter);
+
+        // since we use the TreasuryCap to make the auth control, we use xbtc_receiver as a sharedObject
+        transfer::share_object(xbtc_receiver);
 
         // Freeze the metadata object
         transfer::public_freeze_object(metadata);
@@ -174,7 +176,7 @@ module xbtc::xbtc {
 
     /// Set a new receiver address (TreasuryCap owner only)
     public entry fun set_receiver(
-        _treasury_cap: &TreasuryCap<XBTC>, // Only the treasury cap owner can call this
+        _treasury_cap: &TreasuryCap<XBTC>, // Only the treasury cap owner can call this, not used, use understore to indentify it.
         xbtc_receiver: &mut XBTCReceiver,
         new_receiver_address: address,
         ctx: &mut tx_context::TxContext
@@ -262,18 +264,18 @@ module xbtc::xbtc {
 
         let denylister = tx_context::sender(ctx);
 
-        event::emit(BatchAddDenyListEvent {
-            denylister,
-            accounts
-        });
-
         let mut i = 0;
 
         while (i < count) {
             let account = *std::vector::borrow(&accounts, i);
             coin::deny_list_v2_add(deny_list, deny_cap, account, ctx);
             i = i + 1;
-        }
+        };
+
+        event::emit(BatchAddDenyListEvent {
+            denylister,
+            accounts
+        });
     }
 
     /// Batch remove addresses from deny list
@@ -288,18 +290,18 @@ module xbtc::xbtc {
 
         let denylister = tx_context::sender(ctx);
 
-        event::emit(BatchRemoveDenyListEvent {
-            denylister,
-            accounts
-        });
-
         let mut i = 0;
 
         while (i < count) {
             let account = *std::vector::borrow(&accounts, i);
             coin::deny_list_v2_remove(deny_list, deny_cap, account, ctx);
             i = i + 1;
-        }
+        };
+
+        event::emit(BatchRemoveDenyListEvent {
+            denylister,
+            accounts
+        });
     }
 
 
@@ -308,7 +310,6 @@ module xbtc::xbtc {
     /// Transfer the minter role (TreasuryCap and XBTCReceiver) to a new address
     public entry fun transfer_minter_role(
         treasury_cap: TreasuryCap<XBTC>,
-        xbtc_receiver: XBTCReceiver,
         new_minter: address,
         ctx: &mut tx_context::TxContext
     ) {
@@ -318,7 +319,6 @@ module xbtc::xbtc {
 
         // Transfer the treasury cap to the new minter
         transfer::public_transfer(treasury_cap, new_minter);
-        transfer::public_transfer(xbtc_receiver, new_minter);
 
         // Emit the transfer event
         event::emit(TransferMinterRoleEvent {
