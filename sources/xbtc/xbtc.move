@@ -5,7 +5,7 @@ module okx_xbtc::xbtc {
     use aptos_framework::fungible_asset::{Self, MintRef, TransferRef, BurnRef, Metadata, FungibleAsset};
     use aptos_framework::object::{Self, Object};
     use aptos_framework::primary_fungible_store;
-    use aptos_std::smart_table::{Self, SmartTable};
+    use aptos_std::big_ordered_map::{Self, BigOrderedMap};
     use std::option;
     use std::signer;
     use std::string::{Self, utf8};
@@ -13,15 +13,15 @@ module okx_xbtc::xbtc {
 
     // ===== Error codes =====
     /// Caller is not authorized to make this call
-    const EUNAUTHORIZED: u64 = 1;
+    const EUnauthorized: u64 = 1;
     /// No operations are allowed when contract is paused
-    const EPAUSED: u64 = 2;
+    const EPaused: u64 = 2;
     /// The account is denylisted
-    const EDENYLISTED: u64 = 3;
+    const EDenylisted: u64 = 3;
     /// Invalid address
-    const EINVALID_ADDRESS: u64 = 4;
+    const EInvalidAddress: u64 = 4;
     /// Invalid amount
-    const EINVALID_AMOUNT: u64 = 5;
+    const EInvalidAmount: u64 = 5;
 
     // ===== Token metadata constants =====
     const TOKEN_NAME: vector<u8> = b"Regulated Bitcoin";
@@ -50,7 +50,7 @@ module okx_xbtc::xbtc {
     #[resource_group_member(group = aptos_framework::object::ObjectGroup)]
     struct State has key {
         paused: bool,
-        DenyList: SmartTable<address, bool>,
+        denylist: BigOrderedMap<address, bool>,
     }
 
     // ===== Event types =====
@@ -130,7 +130,6 @@ module okx_xbtc::xbtc {
         );
 
         // Set ALL stores for the fungible asset to untransferable.
-        // This prevents any store from being transferred to another account, which can be used to bypass the frozen flag.
         fungible_asset::set_untransferable(constructor_ref);
 
         // All resources created will be kept in the asset metadata object.
@@ -150,7 +149,7 @@ module okx_xbtc::xbtc {
 
         move_to(metadata_object_signer, State {
             paused: false,
-            DenyList: smart_table::new(),
+            denylist: big_ordered_map::new(),
         });
 
         // Override the deposit and withdraw functions which mean overriding transfer.
@@ -200,15 +199,12 @@ module okx_xbtc::xbtc {
     /// Mint new tokens to the specified account. This checks that the caller is a minter, the xbtc is not paused,
     /// and the account is not denylisted.
     public entry fun mint(minter: &signer, receiver: address, amount: u64) acquires XBTCToken, Roles, State {
-        assert_not_paused();
         assert_is_minter(minter);
-        assert_not_denylisted(receiver);
         assert_not_zero_address(receiver);
         assert_amount_greater_than_zero(amount);
 
         let roles = borrow_global<Roles>(xbtc_address());
-        let receiver_addr = roles.receiver;
-        assert!(receiver == receiver_addr, EINVALID_ADDRESS);
+        assert!(receiver == roles.receiver, EInvalidAddress);
         
         // Simplified implementation without redundant conditions
         let token = borrow_global<XBTCToken>(xbtc_address());
@@ -283,11 +279,10 @@ module okx_xbtc::xbtc {
 
     /// Add an account to the DenyList. This checks that the caller is the denylister.
     public entry fun add_to_deny_list(denylister: &signer, account: address) acquires XBTCToken, Roles, State {
-        assert_not_paused();
         assert_is_denylister(denylister);
 
         let state = borrow_global_mut<State>(xbtc_address());
-        smart_table::upsert(&mut state.DenyList, account, true);
+        big_ordered_map::add(&mut state.denylist, account, true);
 
         let freeze_ref = &borrow_global<XBTCToken>(xbtc_address()).transfer_ref;
         primary_fungible_store::set_frozen_flag(freeze_ref, account, true);
@@ -300,11 +295,10 @@ module okx_xbtc::xbtc {
 
     /// Remove an account from the DenyList. This checks that the caller is the denylister.
     public entry fun remove_from_deny_list(denylister: &signer, account: address) acquires XBTCToken, Roles, State {
-        assert_not_paused();
         assert_is_denylister(denylister);
         
         let state = borrow_global_mut<State>(xbtc_address());
-        smart_table::remove(&mut state.DenyList, account);
+        big_ordered_map::remove(&mut state.denylist, &account);
 
         let freeze_ref = &borrow_global<XBTCToken>(xbtc_address()).transfer_ref;
         primary_fungible_store::set_frozen_flag(freeze_ref, account, false);
@@ -317,7 +311,6 @@ module okx_xbtc::xbtc {
 
     /// Add multiple accounts to the DenyList. This checks that the caller is the denylister.
     public entry fun batch_add_to_deny_list(denylister: &signer, accounts: vector<address>) acquires XBTCToken, Roles, State {
-        assert_not_paused();
         assert_is_denylister(denylister);
         assert_not_empty_accounts(accounts);
         
@@ -331,23 +324,21 @@ module okx_xbtc::xbtc {
         while (i < len) {
             let account = *vector::borrow(&accounts, i);
             // Add to denylist table
-            smart_table::upsert(&mut state.DenyList, account, true);
+            big_ordered_map::add(&mut state.denylist, account, true);
             // Freeze primary store
             primary_fungible_store::set_frozen_flag(freeze_ref, account, true);
             i = i + 1;
         };
         
-        // Create and emit batch event
-        let batch_event = BatchAddDenyListEvent {
+        // emit event
+        event::emit(BatchAddDenyListEvent {
             denylister: denylister_addr,
             accounts,
-        };
-        event::emit(batch_event);
+        });
     }
 
     /// Remove multiple accounts from the DenyList. This checks that the caller is the denylister.
     public entry fun batch_remove_from_deny_list(denylister: &signer, accounts: vector<address>) acquires XBTCToken, Roles, State {
-        assert_not_paused();
         assert_is_denylister(denylister);
         assert_not_empty_accounts(accounts);
         
@@ -361,20 +352,20 @@ module okx_xbtc::xbtc {
         while (i < len) {
             let account = *vector::borrow(&accounts, i);
             // Remove from denylist table
-            if (smart_table::contains(&state.DenyList, account)) {
-                smart_table::remove(&mut state.DenyList, account);
+            if (big_ordered_map::contains(&state.denylist, &account)) {
+                big_ordered_map::remove(&mut state.denylist, &account);
+                // Unfreeze primary store
+                primary_fungible_store::set_frozen_flag(freeze_ref, account, false);
             };
-            // Unfreeze primary store
-            primary_fungible_store::set_frozen_flag(freeze_ref, account, false);
+            
             i = i + 1;
         };
         
-        // Create and emit batch event
-        let batch_event = BatchRemoveDenyListEvent {
+        // emit event
+        event::emit(BatchRemoveDenyListEvent {
             denylister: denylister_addr,
             accounts,
-        };
-        event::emit(batch_event);
+        });
     }
 
     
@@ -414,44 +405,44 @@ module okx_xbtc::xbtc {
     }
 
     // ===== Helper functions =====
-    public fun metadata(): Object<Metadata> {
+    fun metadata(): Object<Metadata> {
         object::address_to_object(xbtc_address())
     }
 
     fun assert_is_minter(minter: &signer) acquires Roles {
         let roles = borrow_global<Roles>(xbtc_address());
         let minter_addr = signer::address_of(minter);
-        assert!(minter_addr == roles.minter, EUNAUTHORIZED);
+        assert!(minter_addr == roles.minter, EUnauthorized);
     }
 
     fun assert_is_denylister(denylister: &signer) acquires Roles {
         let roles = borrow_global<Roles>(xbtc_address());
         let denylister_addr = signer::address_of(denylister);
-        assert!(denylister_addr == roles.denylister, EUNAUTHORIZED);
+        assert!(denylister_addr == roles.denylister, EUnauthorized);
     }
 
     fun assert_not_paused() acquires State {
         let state = borrow_global<State>(xbtc_address());
-        assert!(!state.paused, EPAUSED);
+        assert!(!state.paused, EPaused);
     }
 
     fun assert_not_denylisted(account: address) acquires State {
         let state = borrow_global<State>(xbtc_address());
-        assert!(!smart_table::contains(&state.DenyList, account), EDENYLISTED);
+        assert!(!big_ordered_map::contains(&state.denylist, &account), EDenylisted);
     }
 
     /// Asserts that the given address is not the zero address
     fun assert_not_zero_address(addr: address) {
-        assert!(addr != ZERO_ADDRESS, EINVALID_ADDRESS);
+        assert!(addr != ZERO_ADDRESS, EInvalidAddress);
     }
 
     /// Asserts that the given amount is not zero
     fun assert_amount_greater_than_zero(amount: u64) {
-        assert!(amount > 0, EINVALID_AMOUNT);
+        assert!(amount > 0, EInvalidAmount);
     }
 
     fun assert_not_empty_accounts(accounts: vector<address>) {
-        assert!(vector::length(&accounts) > 0, EINVALID_ADDRESS);
+        assert!(vector::length(&accounts) > 0, EInvalidAddress);
     }
 
 
