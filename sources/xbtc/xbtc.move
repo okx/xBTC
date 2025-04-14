@@ -232,14 +232,9 @@ module okx_xbtc::xbtc {
         let account = signer::address_of(minter);
         let store = primary_fungible_store::ensure_primary_store_exists(account, metadata());
         
-        // Withdraw and burn tokens
+        // Burn tokens
         let token = borrow_global<XBTCToken>(xbtc_address());
-        let tokens = fungible_asset::withdraw_with_ref(
-            &token.transfer_ref,
-            store,
-            amount,
-        );
-        fungible_asset::burn(&token.burn_ref, tokens);
+        fungible_asset::burn_from(&token.burn_ref, store, amount);
         
         // Emit event
         event::emit(BurnEvent {
