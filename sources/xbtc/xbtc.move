@@ -1,4 +1,4 @@
-module okx_xbtc::xbtc {
+module xbtc_aptos::xbtc {
     use aptos_framework::dispatchable_fungible_asset;
     use aptos_framework::event;
     use aptos_framework::function_info;
@@ -117,8 +117,8 @@ module okx_xbtc::xbtc {
     }
 
     // ===== Initialize functions =====
-    fun init_module(okx_xbtc_signer: &signer) {
-        let constructor_ref = &object::create_named_object(okx_xbtc_signer, TOKEN_SYMBOL);
+    fun init_module(xbtc_signer: &signer) {
+        let constructor_ref = &object::create_named_object(xbtc_signer, TOKEN_SYMBOL);
         primary_fungible_store::create_primary_store_enabled_fungible_asset(
             constructor_ref,
             option::none(),   /* total supply */
@@ -155,12 +155,12 @@ module okx_xbtc::xbtc {
         // Override the deposit and withdraw functions which mean overriding transfer.
         // This ensures all transfer will call withdraw and deposit functions in this module and perform the necessary checks.
         let deposit = function_info::new_function_info(
-            okx_xbtc_signer,
+            xbtc_signer,
             string::utf8(b"xbtc"),
             string::utf8(b"deposit"),
         );
         let withdraw = function_info::new_function_info(
-            okx_xbtc_signer,
+            xbtc_signer,
             string::utf8(b"xbtc"),
             string::utf8(b"withdraw"),
         );
@@ -396,7 +396,7 @@ module okx_xbtc::xbtc {
     // ===== View functions =====
     #[view]
     public fun xbtc_address(): address {
-        object::create_object_address(&@okx_xbtc, TOKEN_SYMBOL)
+        object::create_object_address(&@xbtc_aptos, TOKEN_SYMBOL)
     }
 
     // ===== Helper functions =====
@@ -446,6 +446,6 @@ module okx_xbtc::xbtc {
 
     #[test_only]
     public fun init_for_test() {
-        init_module(&account::create_signer_for_test(@okx_xbtc));
+        init_module(&account::create_signer_for_test(@xbtc_aptos));
     }
 }
