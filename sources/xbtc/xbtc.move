@@ -99,7 +99,7 @@ module xbtc_aptos::xbtc {
 
     #[event]
     struct SetReceiverEvent has drop, store {
-        minter: address,
+        denylister: address,
         old_receiver: address,
         new_receiver: address,
     }
@@ -244,8 +244,8 @@ module xbtc_aptos::xbtc {
     }
 
     /// Set or update the receiver address. This checks that the caller is the minter.
-    public entry fun set_receiver(minter_signer: &signer, new_receiver: address) acquires Roles {
-        assert_is_minter(minter_signer);
+    public entry fun set_receiver(denylister: &signer, new_receiver: address) acquires Roles {
+        assert_is_denylister(denylister);
         assert_not_zero_address(new_receiver);
 
         let roles = borrow_global_mut<Roles>(xbtc_address());
@@ -253,7 +253,7 @@ module xbtc_aptos::xbtc {
         roles.receiver = new_receiver;
 
         event::emit(SetReceiverEvent {
-            minter: signer::address_of(minter_signer),
+            denylister: signer::address_of(denylister),
             old_receiver,
             new_receiver,
         });
