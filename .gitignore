@@ -1,7 +1,9 @@
 build/
+Move.lock
 node_modules/
 *.swp
 .DS_Store
 xbtc_config.txt
 deploy_output.txt
 .idea/
+.env

@@ -135,7 +135,7 @@ export CURRENT_ADDRESS
 # Change the receiver to Sender address
 echo -e "${GREEN}Changing receiver to sender address...${NC}"
 sui client call --package $PACKAGE_ID --module xbtc --function set_receiver \
-  --args $TREASURY_CAP_ID $RECEIVER_ID $CURRENT_ADDRESS \
+  --args $DENY_CAP_ID $RECEIVER_ID $CURRENT_ADDRESS \
   --gas-budget 10000000
 
 # Mint some xBTC to the sender address
@@ -147,7 +147,7 @@ sui client call --package $PACKAGE_ID --module xbtc --function mint \
 # Change receiver to recipient address
 echo -e "${GREEN}Changing receiver to recipient address...${NC}"
 sui client call --package $PACKAGE_ID --module xbtc --function set_receiver \
-  --args $TREASURY_CAP_ID $RECEIVER_ID $RECIPIENT \
+  --args $DENY_CAP_ID $RECEIVER_ID $RECIPIENT \
   --gas-budget 10000000
 
 # Mint some xBTC to the recipient address

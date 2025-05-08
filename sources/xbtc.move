@@ -67,7 +67,7 @@ module xbtc::xbtc {
 
     /// Emitted when the receiver address is set
     public struct SetReceiverEvent has copy, drop {
-        minter: address,
+        denylister: address,
         old_receiver: address,
         new_receiver: address,
     }
@@ -174,9 +174,9 @@ module xbtc::xbtc {
         });
     }
 
-    /// Set a new receiver address (TreasuryCap owner only)
+    /// Set a new receiver address (denyList owner only)
     public entry fun set_receiver(
-        _treasury_cap: &TreasuryCap<XBTC>, // Only the treasury cap owner can call this, not used, use understore to indentify it.
+        _deny_cap: &mut DenyCapV2<XBTC>, // Only the denyList owner can call this, not used, use understore to indentify it.
         xbtc_receiver: &mut XBTCReceiver,
         new_receiver_address: address,
         ctx: &mut tx_context::TxContext
@@ -184,13 +184,13 @@ module xbtc::xbtc {
         assert!(new_receiver_address != ZERO_ADDRESS, EZeroAddress);
 
         let old_receiver_address = xbtc_receiver.receiver;
-        let minter = tx_context::sender(ctx);
+        let denylister = tx_context::sender(ctx);
 
         // Update receiver address
         xbtc_receiver.receiver = new_receiver_address;
 
         event::emit(SetReceiverEvent {
-            minter,
+            denylister,
             old_receiver: old_receiver_address,
             new_receiver: new_receiver_address
         });
@@ -307,7 +307,7 @@ module xbtc::xbtc {
 
     // ===== Role transfer functions =====
 
-    /// Transfer the minter role (TreasuryCap and XBTCReceiver) to a new address
+    /// Transfer the minter role (TreasuryCap) to a new address
     public entry fun transfer_minter_role(
         treasury_cap: TreasuryCap<XBTC>,
         new_minter: address,

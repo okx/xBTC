@@ -84,7 +84,7 @@ async function main() {
         tx.moveCall({
             target: `${PACKAGE_ID}::xbtc::set_receiver`,
             arguments: [
-                tx.object(TREASURY_CAP_ID),
+                tx.object(DENY_CAP_ID),
                 tx.object(RECEIVER_ID),
                 tx.pure.address(senderAddress)
             ]
@@ -214,7 +214,7 @@ async function main() {
         tx.moveCall({
             target: `${PACKAGE_ID}::xbtc::set_receiver`,
             arguments: [
-                tx.object(TREASURY_CAP_ID),
+                tx.object(DENY_CAP_ID),
                 tx.object(RECEIVER_ID),
                 tx.pure.address(RECIPIENT)
             ]
@@ -286,7 +286,11 @@ async function main() {
         tx = new Transaction();
         tx.moveCall({
             target: `${PACKAGE_ID}::xbtc::set_receiver`,
-            arguments: [tx.object(TREASURY_CAP_ID), tx.object(RECEIVER_ID), tx.pure.address(BLACKLISTED_ADDRESS)]
+            arguments: [
+                tx.object(DENY_CAP_ID),
+                tx.object(RECEIVER_ID),
+                tx.pure.address(BLACKLISTED_ADDRESS)
+            ]
         });
         tx.setGasBudget(GAS_BUDGET);
         result = await provider.signAndExecuteTransaction({
