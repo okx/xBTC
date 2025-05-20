@@ -1,14 +1,14 @@
-# XBTC - Wrapped Bitcoin Token Contract (Aptos)
+# OKX xBTC:
 
-XBTC is a Wrapped Bitcoin implementation based on the Aptos blockchain, built using the Fungible Asset standard.
+xBTC is a token implementation on the Aptos blockchain that represents Bitcoin using the Fungible Asset standard.
 
 ## Features
 
-XBTC token has the following features and functionalities:
+xBTC token has the following features and functionalities:
 
 1. **Basic Information**:
-   - Symbol: XBTC
-   - Name: Wrapped Bitcoin
+   - Symbol: xBTC
+   - Name: OKX Wrapped BTC
    - Decimals: 8
    - Compatible with Aptos Fungible Asset standard
 
@@ -29,8 +29,8 @@ xbtc-aptos/
 ├── scripts/               # Scripts for deployment and operations
 └── sources/               # Move contract source code
     └── xbtc/
-        ├── xbtc.move      # XBTC token main contract
-        └── xbtc_tests.move # XBTC contract tests
+        ├── xbtc.move      # xBTC token main contract
+        └── xbtc_tests.move # xBTC contract tests
 ```
 
 ## Usage Guide
