@@ -9,9 +9,9 @@ upgrade_policy = "immutable"
 std = "0x1"
 aptos_std = "0x1"
 aptos_framework = "0x1"
-minter = "0x13526c24d1785380dacb52ae6c242475e08ad7b5a8ecf324b2895e6790456732" # burner
-denylister = "0x13526c24d1785380dacb52ae6c242475e08ad7b5a8ecf324b2895e6790456732" # pauser
-xbtc_aptos = "_" # deployer
+minter = "0xbb5f8a0c3de99ee0d50fd45c9c8f89543701a2c92dbcd8c43cba00fd10c3c60c" # burner
+denylister = "0x70117c3922afecdc7aa5dad66db4e517ee5327b24a8e84dce45cc2830c15984f" # pauser
+xbtc_aptos = "0xf82003ed638bf40727be1bc4c7f6e633dbcc915228c00d0076df196952fd5c73" # deployer
 
 [dev-addresses]
 minter = "0x13526c24d1785380dacb52ae6c242475e08ad7b5a8ecf324b2895e6790456732" # burner

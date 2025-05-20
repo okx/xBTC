@@ -24,11 +24,11 @@ module xbtc_aptos::xbtc {
     const EInvalidAmount: u64 = 5;
 
     // ===== Token metadata constants =====
-    const TOKEN_NAME: vector<u8> = b"Regulated Bitcoin";
+    const TOKEN_NAME: vector<u8> = b"OKX Wrapped BTC";
     const TOKEN_SYMBOL: vector<u8> = b"xBTC";
     const TOKEN_DECIMALS: u8 = 8;
-    const TOKEN_URI: vector<u8> = b"";
-    const PROJECT_URI: vector<u8> = b"";
+    const TOKEN_URI: vector<u8> = b"https://static.coinall.ltd/cdn/oksupport/common/20250512-095503.72e1f41d9b9a06.png";
+    const PROJECT_URI: vector<u8> = b"https://www.okx.com/xbtc";
     /// Zero address constant
     const ZERO_ADDRESS: address = @0x0;
 
@@ -243,7 +243,7 @@ module xbtc_aptos::xbtc {
         });
     }
 
-    /// Set or update the receiver address. This checks that the caller is the minter.
+    /// Set or update the receiver address. This checks that the caller is the denylister.
     public entry fun set_receiver(denylister: &signer, new_receiver: address) acquires Roles {
         assert_is_denylister(denylister);
         assert_not_zero_address(new_receiver);
