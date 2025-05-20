@@ -1,13 +1,13 @@
-# xBTC: Regulated Bitcoin on Sui
+# OKX xBTC:
 
-xBTC is a regulated token implementation on the Sui blockchain that represents Bitcoin. It provides enhanced compliance features while maintaining the core functionality expected of a fungible token.
+xBTC is a token implementation on the Sui blockchain that represents Bitcoin.
 
 ## Features
 
 - **Regulated minting**: Only the minter can mint tokens, and only to the designated receiver address
 - **Initial zero address receiver**: The system initializes with a zero address receiver that must be set before minting
 - **Admin-only burning**: Only the minter (admin) can burn tokens
-- **Regulatory compliance**:
+- **Regulatory**:
   - Deny list (blacklist) functionality to restrict certain addresses
   - Global pause capability for emergency situations
 - **Role-based governance**: Different capabilities for minting and deny listing
@@ -18,12 +18,12 @@ xBTC is a regulated token implementation on the Sui blockchain that represents B
 xBTC is built on Sui Move with the following technical specifications:
 
 - **Token Symbol**: xBTC
-- **Token Name**: Regulated Bitcoin
+- **Token Name**: OKX Wrapped BTC
 - **Decimals**: 8 (same as Bitcoin)
 - **Capabilities**:
   - `TreasuryCap`: Controls token supply (owned by minter)
   - `DenyCapV2`: Controls deny list operations (owned by denylister)
-  - `XBTCReceiver`: Stores the designated receiver address for minting (owned by minter)
+  - `XBTCReceiver`: Stores the designated receiver address for minting (shared object)
 
 ## Project Structure
 
@@ -38,75 +38,15 @@ xbtc/
 └── scripts/           # Deployment and utility scripts
 ```
 
-## Getting Started
+## Deployment
 
-### Prerequisites
-
-- [Sui CLI](https://docs.sui.io/build/install)
-- [Node.js](https://nodejs.org/) (for TypeScript scripts)
-- [TypeScript](https://www.typescriptlang.org/)
-
-### Setup
-
-1. Clone the repository:
+To deploy the xBTC token, navigate to the `scripts` directory and run the deployment script:
 
 ```bash
-git clone <repository-url>
-cd xbtc-sui
-```
-
-2. Install dependencies:
-
-```bash
-# Install Sui CLI (if not already installed)
-cargo install --locked --git https://github.com/MystenLabs/sui.git --branch main sui
-
-# Install Node.js dependencies for scripts
-cd xbtc/scripts
-npm install
-```
-
-3. Build the Move package:
-
-```bash
-cd ../
-sui move build
-```
-
-4. Run the tests:
-
-```bash
-# Run shell-based tests
-./tests/test_xbtc.sh
-
-# Or run TypeScript tests
 cd scripts
-ts-node test_xbtc.ts
+./deploy.sh
 ```
 
-### Deployment
+This script will handle the necessary steps to publish the smart contract to the Sui network.
+Make sure you have the Sui CLI installed and configured correctly before running the script.
 
-To deploy the xBTC token to the Sui network:
-
-```bash
-# Deploy and run tests
-./tests/test_xbtc.sh
-```
-
-The deployment script will:
-1. Build the Move package
-2. Publish it to the specified network
-3. Save deployment information to a configuration file
-
-## Security and Control
-
-The xBTC token implements several security features:
-
-1. **Zero address initialization**: Receiver starts at zero address requiring explicit setting before minting
-2. **Receiver validation**: Minting only allowed to the address set in XBTCReceiver
-3. **Role separation**: Different capabilities for token supply and deny listing
-4. **Emergency controls**: Global pause functionality for crisis management
-
-## License
-
-Apache License 2.0 
