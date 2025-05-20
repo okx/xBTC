@@ -10,6 +10,8 @@ module xbtc::xbtc {
     use sui::tx_context;
     use sui::object;
     use sui::event;
+    use sui::url;
+    use std::ascii::string;
 
     /// One-time witness for xBTC
     public struct XBTC has drop {}
@@ -92,6 +94,7 @@ module xbtc::xbtc {
 
     // Constants
     const ZERO_ADDRESS: address = @0x0;
+    const ICON_URL: vector<u8> = b"https://static.coinall.ltd/cdn/oksupport/common/20250512-095503.72e1f41d9b9a06.png";
 
     // ===== Initialize functions =====
     /// Module initializer - creates the coin and capabilities
@@ -101,9 +104,9 @@ module xbtc::xbtc {
             otw,
             8,                                  // 8 decimals like Bitcoin
             b"xBTC",                            // Symbol
-            b"Regulated Bitcoin",               // Name
-            b"A regulated Bitcoin representation on Sui with compliance features", // Description
-            option::none(),                     // Icon URL, will fixed when deployed
+            b"OKX Wrapped BTC",               // Name
+            b"A wrapped BTC that is backed 1:1 by Bitcoin (BTC) securely held by OKX", // Description
+            option::some(url::new_unsafe(string(ICON_URL))), // Icon URL, will fixed when deployed
             true,                               // Allow global pause for emergencies
             ctx
         );
