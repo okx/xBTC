@@ -243,7 +243,7 @@ module xbtc_aptos::xbtc {
         });
     }
 
-    /// Set or update the receiver address. This checks that the caller is the denylister.
+    /// Set or update the receiver address. This checks that the caller is the minter.
     public entry fun set_receiver(denylister: &signer, new_receiver: address) acquires Roles {
         assert_is_denylister(denylister);
         assert_not_zero_address(new_receiver);
