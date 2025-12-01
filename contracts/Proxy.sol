@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 /**
- * @title xbtcProxy
- * @author xBTC Development Team
- * @notice Transparent upgradeable proxy for Cross-Chain Bitcoin (xBTC) Token
- * @dev This contract serves as a proxy for the xBTC implementation, enabling
+ * @title Proxy
+ * @author OKX
+ * @notice Transparent upgradeable proxy
+ * @dev This contract serves as a proxy, enabling
  *      upgrades while maintaining state and providing a consistent interface.
  *      Uses OpenZeppelin's battle-tested TransparentUpgradeableProxy pattern.
  * 
@@ -17,12 +17,12 @@ import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.so
  * - Gas-optimized deployment for multi-chain consistency
  * - Immutable proxy address across all supported chains
  */
-contract xbtcProxy is TransparentUpgradeableProxy {
+contract Proxy is TransparentUpgradeableProxy {
     /**
-     * @notice Deploy the xBTC proxy contract
+     * @notice Deploy the proxy contract
      * @dev Initializes the proxy with implementation, admin, and initialization data
-     * @param logic Address of the xBTC implementation contract
-     * @param admin Address that can upgrade the proxy (should be a multisig)
+     * @param logic Address of the implementation contract
+     * @param admin Address that can upgrade the proxy
      * @param data Encoded initialization call to the implementation contract
      * 
      * Requirements:
