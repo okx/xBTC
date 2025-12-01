@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
- * @title xbtc
- * @dev An upgradeable ERC-20 token contract implementing xBTC
+ * @title Token
+ * @dev An upgradeable ERC-20 token contract
  * Features:
  * - ERC-20 standard token functionality
  * - ERC-2612 gasless approvals (permit)
@@ -19,7 +19,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
  * - Fixed supply cap of 21 million tokens
  * - 8 decimal precision (matching Bitcoin)
  */
-contract xbtc is
+contract Token is
 Initializable,
 ERC20Upgradeable,
 ERC20PausableUpgradeable,
@@ -32,8 +32,8 @@ AccessControlUpgradeable
     /// @dev Role identifier for addresses that can pause/unpause and manage deny list
     bytes32 public constant DENY_LISTER_ROLE = keccak256("DENY_LISTER_ROLE");
 
-    /// @dev Maximum token supply: 21 million tokens with 8 decimal places
-    uint256 public constant MAX_SUPPLY = 21_000_000 * 10**8;
+    /// @dev Maximum token supply set during initialization
+    uint256 public MAX_SUPPLY;
 
     // Custom Errors
     error ZeroAddress();
@@ -76,13 +76,15 @@ AccessControlUpgradeable
      * @param denyLister The address that will receive DENY_LISTER_ROLE and DEFAULT_ADMIN_ROLE
      * @param minter The address that will receive MINTER_ROLE for minting/burning tokens
      * @param receiver The initial authorized receiver address for minting operations
+     * @param maxSupply The maximum supply of tokens (with decimal places included)
      */
     function initialize(
         string memory name,
         string memory symbol,
         address denyLister,
         address minter,
-        address receiver
+        address receiver,
+        uint256 maxSupply
     ) initializer public {
         __ERC20_init(name, symbol);
         __ERC20Pausable_init();
@@ -97,6 +99,10 @@ AccessControlUpgradeable
         if (receiver == address(0)) revert ZeroAddress();
         authorizedReceiver = receiver;
         emit ReceiverSet(address(0), receiver);
+
+        // Set the maximum supply
+        if (maxSupply == 0) revert ZeroAmount();
+        MAX_SUPPLY = maxSupply;
     }
 
     /**
