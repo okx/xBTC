@@ -24,17 +24,17 @@ describe("xBTC Comprehensive Tests", function () {
     user2 = await signers[3].getAddress();
 
     // Deploy implementation
-    implementation = await ethers.deployContract("xbtc");
+    implementation = await ethers.deployContract("Token");
     await implementation.waitForDeployment();
 
     // Prepare initialization data
     const initData = implementation.interface.encodeFunctionData(
       "initialize", 
-      [TOKEN_NAME, TOKEN_SYMBOL, admin, minter, user1]
+      [TOKEN_NAME, TOKEN_SYMBOL, admin, minter, user1, MAX_SUPPLY]
     );
 
     // Deploy proxy
-    proxy = await ethers.deployContract("xbtcProxy", [
+    proxy = await ethers.deployContract("contracts/Proxy.sol:Proxy", [
       await implementation.getAddress(),
       admin,
       initData
@@ -48,7 +48,7 @@ describe("xBTC Comprehensive Tests", function () {
   describe("Initialization Edge Cases", function () {
     it("Should not allow re-initialization", async function () {
       await expect(
-        xBTC.initialize(TOKEN_NAME, TOKEN_SYMBOL, admin, minter, user1)
+        xBTC.initialize(TOKEN_NAME, TOKEN_SYMBOL, admin, minter, user1, MAX_SUPPLY)
       ).to.be.revertedWithCustomError(xBTC, "InvalidInitialization");
     });
 

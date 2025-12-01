@@ -53,7 +53,7 @@ describe("xBTC End-to-End Tests", function () {
       console.log("🏗️  Deploying xBTC Implementation...");
       
       // Deploy implementation contract
-      implementation = await ethers.deployContract("xbtc");
+      implementation = await ethers.deployContract("Token");
       await implementation.waitForDeployment();
       
       const implementationAddress = await implementation.getAddress();
@@ -61,7 +61,7 @@ describe("xBTC End-to-End Tests", function () {
       
       // Verify implementation is initialized (should revert)
       await expect(
-        implementation.initialize(TOKEN_CONFIG.NAME, TOKEN_CONFIG.SYMBOL, adminAddress, minterAddress, treasuryAddress)
+        implementation.initialize(TOKEN_CONFIG.NAME, TOKEN_CONFIG.SYMBOL, adminAddress, minterAddress, treasuryAddress, TOKEN_CONFIG.MAX_SUPPLY)
       ).to.be.revertedWithCustomError(implementation, "InvalidInitialization");
       
       console.log("   ✅ Implementation deployment complete");
@@ -73,11 +73,11 @@ describe("xBTC End-to-End Tests", function () {
       // Encode initialization data
       const initData = implementation.interface.encodeFunctionData(
         "initialize", 
-        [TOKEN_CONFIG.NAME, TOKEN_CONFIG.SYMBOL, adminAddress, minterAddress, treasuryAddress]
+        [TOKEN_CONFIG.NAME, TOKEN_CONFIG.SYMBOL, adminAddress, minterAddress, treasuryAddress, TOKEN_CONFIG.MAX_SUPPLY]
       );
       
       // Deploy xbtcProxy (TransparentUpgradeableProxy)
-      const ProxyFactory = await ethers.getContractFactory("xbtcProxy");
+      const ProxyFactory = await ethers.getContractFactory("contracts/Proxy.sol:Proxy");
       proxy = await ProxyFactory.deploy(
         await implementation.getAddress(),
     adminAddress, // proxy admin

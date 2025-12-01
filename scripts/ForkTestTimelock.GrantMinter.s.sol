@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import "forge-std/Script.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
-import "../contracts/xbtc.sol";
+import "../contracts/Token.sol";
 
 /**
  * @title ForkTestTimelock
@@ -47,7 +47,7 @@ contract ForkTestTimelockGrantMinterRole is Script {
 
     // Contract instances
     TimelockController public timelock;
-    xbtc public xbtcProxy;
+    Token public xbtcProxy;
 
     // Operation tracking
     bytes32 public operationId;
@@ -60,7 +60,7 @@ contract ForkTestTimelockGrantMinterRole is Script {
 
         // Initialize contract instances
         timelock = TimelockController(payable(timelockAddress));
-        xbtcProxy = xbtc(xbtcProxyAddress);
+        xbtcProxy = Token(xbtcProxyAddress);
 
         proposer = vm.envAddress("PRIVILEGED_ADDRESS");
         executor = proposer;

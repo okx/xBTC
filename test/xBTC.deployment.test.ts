@@ -15,6 +15,7 @@ describe("xBTC Deployment End-to-End", function () {
 
   const TOKEN_NAME = "Cross-Chain Bitcoin";
   const TOKEN_SYMBOL = "xBTC";
+  const MAX_SUPPLY = 21_000_000n * 10n ** 8n;
 
   it("Phase 1: Deploy contracts with predetermined addresses pattern", async function () {
     console.log("🚀 Starting xBTC End-to-End Deployment Test");
@@ -33,7 +34,7 @@ describe("xBTC Deployment End-to-End", function () {
 
     // Deploy implementation
     console.log("🏗️  Deploying xBTC Implementation...");
-    implementation = await ethers.deployContract("xbtc");
+    implementation = await ethers.deployContract("Token");
     await implementation.waitForDeployment();
     
     const implementationAddress = await implementation.getAddress();
@@ -42,12 +43,12 @@ describe("xBTC Deployment End-to-End", function () {
     // Prepare initialization data
     const initData = implementation.interface.encodeFunctionData(
       "initialize", 
-      [TOKEN_NAME, TOKEN_SYMBOL, admin, minter, treasury]
+      [TOKEN_NAME, TOKEN_SYMBOL, admin, minter, treasury, MAX_SUPPLY]
     );
 
     // Deploy proxy
     console.log("🔄 Deploying Proxy...");
-    proxy = await ethers.deployContract("xbtcProxy", [
+    proxy = await ethers.deployContract("contracts/Proxy.sol:Proxy", [
       implementationAddress,
       admin, // proxy admin
       initData

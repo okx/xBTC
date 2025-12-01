@@ -17,6 +17,7 @@ describe("xBTC Proxy Admin Transfer Tests", function () {
 
   const TOKEN_NAME = "Cross-Chain Bitcoin";
   const TOKEN_SYMBOL = "xBTC";
+  const MAX_SUPPLY = 21_000_000n * 10n ** 8n;
 
   beforeEach(async function () {
     const signers = await ethers.getSigners();
@@ -28,17 +29,17 @@ describe("xBTC Proxy Admin Transfer Tests", function () {
     newAdminSigner = signers[2];
 
     // Deploy implementation
-    implementation = await ethers.deployContract("xbtc");
+    implementation = await ethers.deployContract("Token");
     await implementation.waitForDeployment();
 
     // Prepare initialization data
     const initData = implementation.interface.encodeFunctionData(
       "initialize", 
-      [TOKEN_NAME, TOKEN_SYMBOL, admin, minter, user]
+      [TOKEN_NAME, TOKEN_SYMBOL, admin, minter, user, MAX_SUPPLY]
     );
 
     // Deploy proxy
-    proxy = await ethers.deployContract("xbtcProxy", [
+    proxy = await ethers.deployContract("contracts/Proxy.sol:Proxy", [
       await implementation.getAddress(),
       admin, // proxy admin
       initData
@@ -93,7 +94,7 @@ describe("xBTC Proxy Admin Transfer Tests", function () {
     
     // Verify new admin can call admin functions
     // Deploy a new implementation for upgrade test
-    const newImplementation = await ethers.deployContract("xbtc");
+    const newImplementation = await ethers.deployContract("Token");
     await newImplementation.waitForDeployment();
     
     // The new admin should be able to upgrade the proxy through ProxyAdmin
@@ -110,7 +111,7 @@ describe("xBTC Proxy Admin Transfer Tests", function () {
     await proxyAdmin.connect(adminSigner).transferOwnership(newAdmin);
     
     // Deploy a new implementation 
-    const newImplementation = await ethers.deployContract("xbtc");
+    const newImplementation = await ethers.deployContract("Token");
     await newImplementation.waitForDeployment();
     
     // Old admin should not be able to upgrade anymore

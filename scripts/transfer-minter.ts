@@ -39,7 +39,7 @@ async function main() {
   console.log("New minter address:", NEW_MINTER_ADDRESS);
 
   // Connect to the deployed xBTC contract
-  const xbtcFactory = await ethers.getContractFactory("xbtc");
+  const xbtcFactory = await ethers.getContractFactory("Token");
   const xBTC = xbtcFactory.attach(PROXY_ADDRESS);
 
   // Verify contract connection

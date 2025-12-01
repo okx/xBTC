@@ -5,8 +5,8 @@ import {Test, console} from "forge-std/Test.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {ProxyAdmin, ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {xbtc} from "../contracts/xbtc.sol";
-import {xbtcProxy} from "../contracts/xbtcProxy.sol";
+import {Token} from "../contracts/Token.sol";
+import {Proxy} from "../contracts/Proxy.sol";
 
 /**
  * @title xBTCTimelockTest
@@ -17,10 +17,10 @@ contract xBTCTimelockTest is Test {
     // Contracts
     TimelockController public timelock;
     ProxyAdmin public proxyAdmin;
-    xbtc public implementation;
-    xbtc public implementationV2;
-    xbtcProxy public proxy;
-    xbtc public xbtcToken;
+    Token public implementation;
+    Token public implementationV2;
+    Proxy public proxy;
+    Token public xbtcToken;
 
     // Roles
     bytes32 public constant PROPOSER_ROLE = keccak256("PROPOSER_ROLE");
@@ -80,21 +80,22 @@ contract xBTCTimelockTest is Test {
         );
 
         // Deploy implementation
-        implementation = new xbtc();
+        implementation = new Token();
 
         // Prepare initialization data
         bytes memory initData = abi.encodeWithSelector(
-            xbtc.initialize.selector,
+            Token.initialize.selector,
             "Cross-Chain Bitcoin",
             "xBTC",
             address(timelock), // denyLister (timelock has DEFAULT_ADMIN_ROLE)
             minter,
-            receiver
+            receiver,
+            MAX_SUPPLY
         );
 
         // Deploy proxy with timelock as initialOwner
         // TransparentUpgradeableProxy will create a ProxyAdmin automatically
-        proxy = new xbtcProxy(
+        proxy = new Proxy(
             address(implementation),
             address(timelock), // initialOwner of the auto-created ProxyAdmin
             initData
@@ -106,8 +107,8 @@ contract xBTCTimelockTest is Test {
         address adminAddress = address(uint160(uint256(vm.load(address(proxy), adminSlot))));
         proxyAdmin = ProxyAdmin(adminAddress);
 
-        // Get xbtc interface for proxy
-        xbtcToken = xbtc(address(proxy));
+        // Get Token interface for proxy
+        xbtcToken = Token(address(proxy));
 
         // Verify initial setup
         assertEq(xbtcToken.name(), "Cross-Chain Bitcoin");
@@ -134,7 +135,7 @@ contract xBTCTimelockTest is Test {
         console.log("\n=== Test: Upgrade Implementation Through Timelock ===");
 
         // Deploy new implementation (V2)
-        implementationV2 = new xbtc();
+        implementationV2 = new Token();
         console.log("New implementation deployed at:", address(implementationV2));
 
         // Prepare upgrade call data
@@ -192,7 +193,7 @@ contract xBTCTimelockTest is Test {
     function test_RevertWhen_NonProposerSchedulesUpgrade() public {
         console.log("\n=== Test: Non-Proposer Cannot Schedule ===");
 
-        implementationV2 = new xbtc();
+        implementationV2 = new Token();
 
         bytes memory upgradeCallData = abi.encodeCall(
             ProxyAdmin.upgradeAndCall, (ITransparentUpgradeableProxy(address(proxy)), address(implementationV2), "")
@@ -214,7 +215,7 @@ contract xBTCTimelockTest is Test {
     function test_RevertWhen_NonExecutorExecutesOperation() public {
         console.log("\n=== Test: Non-Executor Cannot Execute ===");
 
-        implementationV2 = new xbtc();
+        implementationV2 = new Token();
 
         bytes memory upgradeCallData = abi.encodeCall(
             ProxyAdmin.upgradeAndCall, (ITransparentUpgradeableProxy(address(proxy)), address(implementationV2), "")
@@ -345,7 +346,7 @@ contract xBTCTimelockTest is Test {
         require(xbtcToken.transfer(user1, 100 * 10 ** 8), "Transfer failed");
 
         // Prepare pause call data
-        bytes memory pauseCallData = abi.encodeWithSelector(xbtc.pause.selector);
+        bytes memory pauseCallData = abi.encodeWithSelector(Token.pause.selector);
 
         // Schedule pause
         vm.prank(proposer);
@@ -377,7 +378,7 @@ contract xBTCTimelockTest is Test {
         console.log("\n=== Test: Unpause Contract Through Timelock ===");
 
         // First pause the contract (directly as timelock for speed)
-        bytes memory pauseCallData = abi.encodeWithSelector(xbtc.pause.selector);
+        bytes memory pauseCallData = abi.encodeWithSelector(Token.pause.selector);
         vm.prank(proposer);
         timelock.schedule(address(xbtcToken), 0, pauseCallData, bytes32(0), bytes32(uint256(4)), MIN_DELAY);
         vm.warp(block.timestamp + MIN_DELAY);
@@ -388,7 +389,7 @@ contract xBTCTimelockTest is Test {
         console.log("Contract paused");
 
         // Prepare unpause call data
-        bytes memory unpauseCallData = abi.encodeWithSelector(xbtc.unpause.selector);
+        bytes memory unpauseCallData = abi.encodeWithSelector(Token.unpause.selector);
 
         // Schedule unpause
         vm.prank(proposer);
@@ -426,7 +427,7 @@ contract xBTCTimelockTest is Test {
         console.log("\n=== Test: Add to Deny List Through Timelock ===");
 
         // Prepare add to deny list call data
-        bytes memory addToDenyListCallData = abi.encodeWithSelector(xbtc.addToDenyList.selector, user1);
+        bytes memory addToDenyListCallData = abi.encodeWithSelector(Token.addToDenyList.selector, user1);
 
         // Schedule operation
         vm.prank(proposer);
@@ -508,7 +509,7 @@ contract xBTCTimelockTest is Test {
     function test_CancelScheduledOperation() public {
         console.log("\n=== Test: Cancel Scheduled Operation ===");
 
-        implementationV2 = new xbtc();
+        implementationV2 = new Token();
 
         bytes memory upgradeCallData = abi.encodeCall(
             ProxyAdmin.upgradeAndCall, (ITransparentUpgradeableProxy(address(proxy)), address(implementationV2), "")
@@ -590,7 +591,7 @@ contract xBTCTimelockTest is Test {
         console.log("CANCELLER_ROLE NOT auto-granted (must be granted separately if needed)");
 
         // Verify new proposer can schedule operations
-        implementationV2 = new xbtc();
+        implementationV2 = new Token();
         bytes memory testCallData = abi.encodeCall(
             ProxyAdmin.upgradeAndCall, (ITransparentUpgradeableProxy(address(proxy)), address(implementationV2), "")
         );
@@ -641,7 +642,7 @@ contract xBTCTimelockTest is Test {
 
         // Verify new executor can execute operations
         // First schedule an operation
-        implementationV2 = new xbtc();
+        implementationV2 = new Token();
         bytes memory testCallData = abi.encodeCall(
             ProxyAdmin.upgradeAndCall, (ITransparentUpgradeableProxy(address(proxy)), address(implementationV2), "")
         );
@@ -700,7 +701,7 @@ contract xBTCTimelockTest is Test {
         timelock.schedule(
             address(xbtcToken),
             0,
-            abi.encodeWithSelector(xbtc.pause.selector),
+            abi.encodeWithSelector(Token.pause.selector),
             bytes32(0),
             bytes32(uint256(205)),
             MIN_DELAY
@@ -747,7 +748,7 @@ contract xBTCTimelockTest is Test {
         console.log("Min delay updated successfully to", newDelay / 1 days, "days");
 
         // Verify new operations require the new delay
-        bytes memory testCallData = abi.encodeWithSelector(xbtc.pause.selector);
+        bytes memory testCallData = abi.encodeWithSelector(Token.pause.selector);
         
         vm.prank(proposer);
         timelock.schedule(
@@ -875,7 +876,7 @@ contract xBTCTimelockTest is Test {
 
         // Step 1: Deploy new implementation
         console.log("\nStep 1: Deploy new implementation");
-        implementationV2 = new xbtc();
+        implementationV2 = new Token();
         console.log("New implementation:", address(implementationV2));
 
         // Step 2: Schedule upgrade

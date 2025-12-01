@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import "../contracts/xbtc.sol";
+import "../contracts/Token.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -49,7 +49,7 @@ contract ForkTestTimelockTransferOwner is Script {
 
     // Contract instances
     TimelockController public timelock;
-    xbtc public xbtcProxy;
+    Token public xbtcProxy;
     ProxyAdmin public proxyAdmin;
 
     // Operation tracking
@@ -64,7 +64,7 @@ contract ForkTestTimelockTransferOwner is Script {
 
         // Initialize contract instances
         timelock = TimelockController(payable(timelockAddress));
-        xbtcProxy = xbtc(xbtcProxyAddress);
+        xbtcProxy = Token(xbtcProxyAddress);
         proxyAdmin = ProxyAdmin(proxyAdminAddress);
 
         // For timelock operations, use currentAdmin as proposer/executor

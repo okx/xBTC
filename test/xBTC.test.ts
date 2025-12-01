@@ -34,17 +34,17 @@ describe("xBTC Contract", function () {
     blockedAddress = await blocked.getAddress();
 
     // Deploy implementation
-    const implementation = await ethers.deployContract("xbtc");
+    const implementation = await ethers.deployContract("Token");
     await implementation.waitForDeployment();
 
     // Prepare initialization data
     const initData = implementation.interface.encodeFunctionData(
       "initialize", 
-      [TOKEN_NAME, TOKEN_SYMBOL, adminAddress, minterAddress, user1Address]
+      [TOKEN_NAME, TOKEN_SYMBOL, adminAddress, minterAddress, user1Address, MAX_SUPPLY]
     );
 
     // Deploy proxy
-    const proxy = await ethers.deployContract("xbtcProxy", [
+    const proxy = await ethers.deployContract("contracts/Proxy.sol:Proxy", [
       await implementation.getAddress(),
       adminAddress,
       initData
@@ -73,7 +73,7 @@ describe("xBTC Contract", function () {
 
     it("Should not allow re-initialization", async function () {
       await expect(
-        xBTC.initialize(TOKEN_NAME, TOKEN_SYMBOL, adminAddress, minterAddress, user1Address)
+        xBTC.initialize(TOKEN_NAME, TOKEN_SYMBOL, adminAddress, minterAddress, user1Address, MAX_SUPPLY)
       ).to.be.revertedWithCustomError(xBTC, "InvalidInitialization");
     });
 
@@ -837,18 +837,18 @@ describe("xBTC Contract", function () {
   describe("Coverage - Initialize Edge Cases", function () {
     it("Should revert when initializing with zero receiver address", async function () {
       // Deploy a new implementation for this test
-      const implementation = await ethers.deployContract("xbtc");
+      const implementation = await ethers.deployContract("Token");
       await implementation.waitForDeployment();
 
       // Try to initialize with zero receiver
       const initData = implementation.interface.encodeFunctionData(
         "initialize", 
-        [TOKEN_NAME, TOKEN_SYMBOL, adminAddress, minterAddress, ZeroAddress]
+        [TOKEN_NAME, TOKEN_SYMBOL, adminAddress, minterAddress, ZeroAddress, MAX_SUPPLY]
       );
 
       // This should revert during proxy deployment
       await expect(
-        ethers.deployContract("xbtcProxy", [
+        ethers.deployContract("contracts/Proxy.sol:Proxy", [
           await implementation.getAddress(),
           adminAddress,
           initData
