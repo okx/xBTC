@@ -22,3 +22,8 @@ typechain-types
 
 # Hardhat coverage reports
 /coverage
+
+/out
+/broadcast
+.cursor/
+.DS_Store
