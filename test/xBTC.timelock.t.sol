@@ -363,7 +363,7 @@ contract xBTCTimelockTest is Test {
         // Verify transfers are blocked
         vm.startPrank(user1);
         vm.expectRevert();
-        require(xbtcToken.transfer(user2, 10 * 10 ** 8), "Transfer failed");
+        xbtcToken.transfer(user2, 10 * 10 ** 8);
         vm.stopPrank();
         console.log("Transfers blocked during pause");
 
@@ -448,7 +448,7 @@ contract xBTCTimelockTest is Test {
         // Verify transfers to denied address fail
         vm.startPrank(receiver);
         vm.expectRevert();
-        require(xbtcToken.transfer(user1, 100 * 10 ** 8), "Transfer failed");
+        xbtcToken.transfer(user1, 100 * 10 ** 8);
         vm.stopPrank();
         console.log("Transfers to denied address blocked");
 
