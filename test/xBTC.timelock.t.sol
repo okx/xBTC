@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "forge-std/Test.sol";
-import "@openzeppelin/contracts/governance/TimelockController.sol";
-import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import "@openzeppelin/contracts/access/IAccessControl.sol";
-import "../contracts/xbtc.sol";
-import "../contracts/xbtcProxy.sol";
+import {Test, console} from "forge-std/Test.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {ProxyAdmin, ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {xbtc} from "../contracts/xbtc.sol";
+import {xbtcProxy} from "../contracts/xbtcProxy.sol";
 
 /**
  * @title xBTCTimelockTest
@@ -343,7 +342,7 @@ contract xBTCTimelockTest is Test {
 
         // Transfer some to user1
         vm.prank(receiver);
-        xbtcToken.transfer(user1, 100 * 10 ** 8);
+        require(xbtcToken.transfer(user1, 100 * 10 ** 8), "Transfer failed");
 
         // Prepare pause call data
         bytes memory pauseCallData = abi.encodeWithSelector(xbtc.pause.selector);
@@ -364,7 +363,7 @@ contract xBTCTimelockTest is Test {
         // Verify transfers are blocked
         vm.startPrank(user1);
         vm.expectRevert();
-        xbtcToken.transfer(user2, 10 * 10 ** 8);
+        require(xbtcToken.transfer(user2, 10 * 10 ** 8), "Transfer failed");
         vm.stopPrank();
         console.log("Transfers blocked during pause");
 
@@ -409,7 +408,7 @@ contract xBTCTimelockTest is Test {
         xbtcToken.mint(receiver, 1000 * 10 ** 8);
 
         vm.prank(receiver);
-        xbtcToken.transfer(user1, 100 * 10 ** 8);
+        require(xbtcToken.transfer(user1, 100 * 10 ** 8), "Transfer failed");
         assertEq(xbtcToken.balanceOf(user1), 100 * 10 ** 8);
         console.log("Transfers working after unpause");
 
@@ -449,7 +448,7 @@ contract xBTCTimelockTest is Test {
         // Verify transfers to denied address fail
         vm.startPrank(receiver);
         vm.expectRevert();
-        xbtcToken.transfer(user1, 100 * 10 ** 8);
+        require(xbtcToken.transfer(user1, 100 * 10 ** 8), "Transfer failed");
         vm.stopPrank();
         console.log("Transfers to denied address blocked");
 
@@ -929,7 +928,7 @@ contract xBTCTimelockTest is Test {
         console.log("New minter can mint tokens");
 
         vm.prank(receiver);
-        xbtcToken.transfer(user1, 1000 * 10 ** 8);
+        require(xbtcToken.transfer(user1, 1000 * 10 ** 8), "Transfer failed");
         assertEq(xbtcToken.balanceOf(user1), 1000 * 10 ** 8);
         console.log("Transfers working correctly");
 
