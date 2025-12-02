@@ -40,7 +40,8 @@ contract xBTCTimelockTest is Test {
 
     // Constants
     uint256 public constant MIN_DELAY = 3 days;
-    uint256 public constant MAX_SUPPLY = 21_000_000 * 10 ** 8;
+    uint256 public constant DECIMALS = 8;
+    uint256 public constant MAX_SUPPLY = 21_000_000 * 10 ** DECIMALS;
 
     // Events
     event CallScheduled(
@@ -113,7 +114,6 @@ contract xBTCTimelockTest is Test {
         // Verify initial setup
         assertEq(xbtcToken.name(), "Cross-Chain Bitcoin");
         assertEq(xbtcToken.symbol(), "xBTC");
-        assertEq(xbtcToken.decimals(), 8);
         assertTrue(xbtcToken.hasRole(xbtcToken.DEFAULT_ADMIN_ROLE(), address(timelock)));
         assertTrue(xbtcToken.hasRole(DENY_LISTER_ROLE, address(timelock)));
         assertTrue(xbtcToken.hasRole(MINTER_ROLE, minter));

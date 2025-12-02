@@ -31,7 +31,8 @@ contract ExchangeRateUpdaterTest is Test {
     uint256 public constant ALLOWANCE = 1e16; // ~1% rate change per day
     uint256 public constant INTERVAL = 1 days;
     uint256 public constant INITIAL_EXCHANGE_RATE = 1e18; // 1:1 initial rate
-    uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** 8;
+    uint256 public constant DECIMALS = 18;
+    uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** DECIMALS;
 
     // Events (must match contract)
     event ExchangeRateUpdated(address indexed caller, uint256 amount);
@@ -105,7 +106,7 @@ contract ExchangeRateUpdaterTest is Test {
 
     // ============ Initialize Tests ============
 
-    function test_Initialize_SetsOwnerAndTokenContract() public {
+    function test_Initialize_SetsOwnerAndTokenContract() public view {
         assertEq(exchangeRateUpdater.owner(), owner);
         assertEq(exchangeRateUpdater.tokenContract(), address(stakedToken));
     }
@@ -523,7 +524,8 @@ contract ExchangeRateUpdaterE2ETest is Test {
     address public oracleOwner;
     address public oracleCaller;
 
-    uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** 8;
+    uint256 public constant DECIMALS = 18;
+    uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** DECIMALS;
     uint256 public constant INITIAL_RATE = 1e18;
     uint256 public constant RATE_ALLOWANCE = 1e16; // ~1% rate change per day
     uint256 public constant RATE_INTERVAL = 1 days;
