@@ -34,7 +34,7 @@ describe("xBTC Contract", function () {
     blockedAddress = await blocked.getAddress();
 
     // Deploy implementation
-    const implementation = await ethers.deployContract("Token");
+    const implementation = await ethers.deployContract("xBTC");
     await implementation.waitForDeployment();
 
     // Prepare initialization data
@@ -837,7 +837,7 @@ describe("xBTC Contract", function () {
   describe("Coverage - Initialize Edge Cases", function () {
     it("Should revert when initializing with zero receiver address", async function () {
       // Deploy a new implementation for this test
-      const implementation = await ethers.deployContract("Token");
+      const implementation = await ethers.deployContract("xBTC");
       await implementation.waitForDeployment();
 
       // Try to initialize with zero receiver

@@ -27,7 +27,7 @@ describe("xBTC Proxy Tests", function () {
     const userSigner = signers[2];
 
     // Deploy implementation
-    implementation = await ethers.deployContract("Token");
+    implementation = await ethers.deployContract("xBTC");
     await implementation.waitForDeployment();
 
     // Prepare initialization data

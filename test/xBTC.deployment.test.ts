@@ -34,7 +34,7 @@ describe("xBTC Deployment End-to-End", function () {
 
     // Deploy implementation
     console.log("🏗️  Deploying xBTC Implementation...");
-    implementation = await ethers.deployContract("Token");
+    implementation = await ethers.deployContract("xBTC");
     await implementation.waitForDeployment();
     
     const implementationAddress = await implementation.getAddress();
