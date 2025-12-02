@@ -16,8 +16,6 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  * - Role-based access control (Deny Lister and Minter roles)
  * - Pausable transfers
  * - Deny list functionality for compliance
- * - Fixed supply cap of 21 million tokens
- * - 8 decimal precision (matching Bitcoin)
  */
 contract Token is
 Initializable,
@@ -312,14 +310,6 @@ AccessControlUpgradeable
         if (denyList[to]) revert RecipientInDenyList(to);
 
         super._update(from, to, value);
-    }
-
-    /**
-     * @dev Returns the number of decimal places for the token
-     * @return The number of decimals (8, matching Bitcoin's precision)
-     */
-    function decimals() public view virtual override returns (uint8) {
-        return 8;
     }
 
     /**
