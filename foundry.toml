@@ -9,7 +9,5 @@ remappings = [
 ]
 
 # Solidity compiler settings
-solc_version = "0.8.24"
-evm_version = "shanghai"
 optimizer = true
 optimizer_runs = 200
