@@ -23,9 +23,13 @@ contract RateLimitTest is Test {
     uint256 public constant INTERVAL = 1 days;
 
     // Events (must match contract)
-    event CallerConfigured(address indexed caller, uint256 amount, uint256 interval);
+    event CallerConfigured(
+        address indexed caller, uint256 amount, uint256 interval
+    );
     event CallerRemoved(address indexed caller);
-    event AllowanceReplenished(address indexed caller, uint256 allowance, uint256 amountReplenished);
+    event AllowanceReplenished(
+        address indexed caller, uint256 allowance, uint256 amountReplenished
+    );
 
     function setUp() public {
         owner = makeAddr("owner");
@@ -44,7 +48,9 @@ contract RateLimitTest is Test {
     }
 
     function test_Constructor_WithZeroAddressOwner_Reverts() public {
-        vm.expectRevert(abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0)));
+        vm.expectRevert(
+            abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0))
+        );
         new RateLimit(address(0));
     }
 
@@ -52,10 +58,10 @@ contract RateLimitTest is Test {
 
     function test_ConfigureCaller_Success() public {
         vm.prank(owner);
-        
+
         vm.expectEmit(true, false, false, true);
         emit CallerConfigured(caller1, ALLOWANCE, INTERVAL);
-        
+
         rateLimit.configureCaller(caller1, ALLOWANCE, INTERVAL);
 
         assertTrue(rateLimit.callers(caller1));
@@ -84,7 +90,11 @@ contract RateLimitTest is Test {
 
     function test_ConfigureCaller_RevertWhen_NotOwner() public {
         vm.prank(nonOwner);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", nonOwner));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)", nonOwner
+            )
+        );
         rateLimit.configureCaller(caller1, ALLOWANCE, INTERVAL);
     }
 
@@ -128,10 +138,10 @@ contract RateLimitTest is Test {
 
         // Now remove the caller
         vm.prank(owner);
-        
+
         vm.expectEmit(true, false, false, false);
         emit CallerRemoved(caller1);
-        
+
         rateLimit.removeCaller(caller1);
 
         assertFalse(rateLimit.callers(caller1));
@@ -146,7 +156,11 @@ contract RateLimitTest is Test {
         rateLimit.configureCaller(caller1, ALLOWANCE, INTERVAL);
 
         vm.prank(nonOwner);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", nonOwner));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)", nonOwner
+            )
+        );
         rateLimit.removeCaller(caller1);
     }
 
@@ -174,7 +188,7 @@ contract RateLimitTest is Test {
         // Manually reduce allowance (simulate usage)
         // We need to use a derived contract or test differently
         // For now, we can test after time has passed with full allowance
-        
+
         // With full allowance, even after time passes, estimated should cap at max
         vm.warp(block.timestamp + INTERVAL / 2);
         assertEq(rateLimit.estimatedAllowance(caller1), ALLOWANCE);
@@ -189,7 +203,8 @@ contract RateLimitTest is Test {
         assertEq(rateLimit.estimatedAllowance(caller1), ALLOWANCE);
     }
 
-    function test_EstimatedAllowance_NonExistentCaller_RevertsWithDivisionByZero() public {
+    function test_EstimatedAllowance_NonExistentCaller_RevertsWithDivisionByZero(
+    ) public {
         // Non-existent caller has interval=0, causing division by zero
         // This is expected behavior - callers must be configured before use
         vm.expectRevert();
@@ -252,7 +267,7 @@ contract RateLimitTest is Test {
 
     function test_EdgeCase_VeryLargeAllowance() public {
         uint256 largeAllowance = type(uint256).max / 2; // Large but safe value
-        
+
         vm.prank(owner);
         rateLimit.configureCaller(caller1, largeAllowance, INTERVAL);
 
@@ -290,7 +305,11 @@ contract RateLimitTest is Test {
         address newOwner = makeAddr("newOwner");
 
         vm.prank(nonOwner);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", nonOwner));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)", nonOwner
+            )
+        );
         rateLimit.transferOwnership(newOwner);
     }
 
@@ -344,7 +363,11 @@ contract RateLimitHarness is RateLimit {
     }
 
     /// @notice Expose internal _getReplenishAmount for testing
-    function exposed_getReplenishAmount(address caller) external view returns (uint256) {
+    function exposed_getReplenishAmount(address caller)
+        external
+        view
+        returns (uint256)
+    {
         return _getReplenishAmount(caller);
     }
 
@@ -367,7 +390,9 @@ contract RateLimitHarnessTest is Test {
     uint256 public constant ALLOWANCE = 1000 * 1e18;
     uint256 public constant INTERVAL = 1 days;
 
-    event AllowanceReplenished(address indexed caller, uint256 allowance, uint256 amountReplenished);
+    event AllowanceReplenished(
+        address indexed caller, uint256 allowance, uint256 amountReplenished
+    );
 
     function setUp() public {
         owner = makeAddr("owner");
@@ -397,7 +422,7 @@ contract RateLimitHarnessTest is Test {
         vm.warp(block.timestamp + INTERVAL / 2);
 
         uint256 replenishAmount = rateLimit.exposed_getReplenishAmount(caller1);
-        
+
         // Expected: (INTERVAL/2) * ALLOWANCE / INTERVAL = ALLOWANCE/2
         assertEq(replenishAmount, ALLOWANCE / 2);
     }
@@ -413,7 +438,7 @@ contract RateLimitHarnessTest is Test {
         vm.warp(block.timestamp + INTERVAL);
 
         uint256 replenishAmount = rateLimit.exposed_getReplenishAmount(caller1);
-        
+
         // Should only replenish 10% to reach max
         assertEq(replenishAmount, ALLOWANCE / 10);
     }
@@ -482,4 +507,3 @@ contract RateLimitHarnessTest is Test {
         assertEq(rateLimit.allowances(caller1), ALLOWANCE);
     }
 }
-

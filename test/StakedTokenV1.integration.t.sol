@@ -38,7 +38,13 @@ contract StakedTokenV1IntegrationTest is Test {
         // Deploy StakedTokenV1
         StakedTokenV1 implementation = new StakedTokenV1();
         bytes memory initData = abi.encodeWithSelector(
-            Token.initialize.selector, "OKX Staked ETH", "xBETH", admin, minter, receiver, MAX_SUPPLY
+            Token.initialize.selector,
+            "OKX Staked ETH",
+            "xBETH",
+            admin,
+            minter,
+            receiver,
+            MAX_SUPPLY
         );
         proxy = new Proxy(address(implementation), admin, initData);
         stakedToken = StakedTokenV1(address(proxy));
@@ -61,7 +67,9 @@ contract StakedTokenV1IntegrationTest is Test {
 
         // Configure caller with rate limit
         vm.prank(oracleOwner);
-        exchangeRateUpdater.configureCaller(oracleCaller, RATE_ALLOWANCE, RATE_INTERVAL);
+        exchangeRateUpdater.configureCaller(
+            oracleCaller, RATE_ALLOWANCE, RATE_INTERVAL
+        );
     }
 
     function test_E2E_CompleteRateUpdateFlow() public {
@@ -80,7 +88,10 @@ contract StakedTokenV1IntegrationTest is Test {
         assertEq(stakedToken.exchangeRate(), newRate);
 
         // 4. Verify allowance decreased
-        assertEq(exchangeRateUpdater.allowances(oracleCaller), RATE_ALLOWANCE - rateChange);
+        assertEq(
+            exchangeRateUpdater.allowances(oracleCaller),
+            RATE_ALLOWANCE - rateChange
+        );
     }
 
     function test_E2E_RateLimitingPreventsExcessiveUpdates() public {
@@ -91,7 +102,9 @@ contract StakedTokenV1IntegrationTest is Test {
 
         // Cannot update again immediately
         vm.prank(oracleCaller);
-        vm.expectRevert("ExchangeRateUpdater: exchange rate update exceeds allowance");
+        vm.expectRevert(
+            "ExchangeRateUpdater: exchange rate update exceeds allowance"
+        );
         exchangeRateUpdater.updateExchangeRate(newRate + 1);
 
         // After waiting, can update again
@@ -106,12 +119,20 @@ contract StakedTokenV1IntegrationTest is Test {
         address newCaller = makeAddr("newCaller");
 
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", admin));
-        exchangeRateUpdater.configureCaller(newCaller, RATE_ALLOWANCE, RATE_INTERVAL);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)", admin
+            )
+        );
+        exchangeRateUpdater.configureCaller(
+            newCaller, RATE_ALLOWANCE, RATE_INTERVAL
+        );
 
         // Oracle owner can configure
         vm.prank(oracleOwner);
-        exchangeRateUpdater.configureCaller(newCaller, RATE_ALLOWANCE, RATE_INTERVAL);
+        exchangeRateUpdater.configureCaller(
+            newCaller, RATE_ALLOWANCE, RATE_INTERVAL
+        );
 
         assertTrue(exchangeRateUpdater.callers(newCaller));
     }
@@ -168,7 +189,9 @@ contract StakedTokenV1IntegrationTest is Test {
         // Configure second caller
         vm.prank(oracleOwner);
         address caller2 = makeAddr("caller2");
-        exchangeRateUpdater.configureCaller(caller2, RATE_ALLOWANCE, RATE_INTERVAL);
+        exchangeRateUpdater.configureCaller(
+            caller2, RATE_ALLOWANCE, RATE_INTERVAL
+        );
 
         uint256 rate1 = INITIAL_RATE + RATE_ALLOWANCE;
         uint256 rate2 = rate1 + RATE_ALLOWANCE;
@@ -190,7 +213,9 @@ contract StakedTokenV1IntegrationTest is Test {
         uint256 emergencyAllowance = 1e17; // 10% max change for emergencies
 
         vm.prank(oracleOwner);
-        exchangeRateUpdater.configureCaller(emergencyCaller, emergencyAllowance, 1 hours);
+        exchangeRateUpdater.configureCaller(
+            emergencyCaller, emergencyAllowance, 1 hours
+        );
 
         // Simulate emergency rate correction (5% adjustment)
         uint256 emergencyRate = INITIAL_RATE + emergencyAllowance;

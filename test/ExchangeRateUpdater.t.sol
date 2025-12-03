@@ -36,7 +36,9 @@ contract ExchangeRateUpdaterTest is Test {
 
     // Events (must match contract)
     event ExchangeRateUpdated(address indexed caller, uint256 amount);
-    event CallerConfigured(address indexed caller, uint256 amount, uint256 interval);
+    event CallerConfigured(
+        address indexed caller, uint256 amount, uint256 interval
+    );
     event CallerRemoved(address indexed caller);
 
     function setUp() public {
@@ -57,18 +59,14 @@ contract ExchangeRateUpdaterTest is Test {
             Token.initialize.selector,
             "OKX Staked ETH",
             "xBETH",
-            admin,     // denyLister / DEFAULT_ADMIN_ROLE
-            minter,    // MINTER_ROLE
-            receiver,  // authorized receiver
+            admin, // denyLister / DEFAULT_ADMIN_ROLE
+            minter, // MINTER_ROLE
+            receiver, // authorized receiver
             MAX_SUPPLY
         );
 
         // Deploy proxy
-        proxy = new Proxy(
-            address(implementation),
-            admin,
-            initData
-        );
+        proxy = new Proxy(address(implementation), admin, initData);
 
         // Get the token through the proxy
         stakedToken = StakedTokenV1(address(proxy));
@@ -100,7 +98,9 @@ contract ExchangeRateUpdaterTest is Test {
     }
 
     function test_Constructor_RevertWhen_ZeroAddressOwner() public {
-        vm.expectRevert(abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0)));
+        vm.expectRevert(
+            abi.encodeWithSignature("OwnableInvalidOwner(address)", address(0))
+        );
         new ExchangeRateUpdater(address(0));
     }
 
@@ -119,23 +119,29 @@ contract ExchangeRateUpdaterTest is Test {
 
     function test_Initialize_RevertWhen_ZeroAddressOwner() public {
         ExchangeRateUpdater newUpdater = new ExchangeRateUpdater(deployer);
-        
+
         vm.expectRevert("ExchangeRateUpdater: owner is the zero address");
         newUpdater.initialize(address(0), address(stakedToken));
     }
 
     function test_Initialize_RevertWhen_ZeroAddressTokenContract() public {
         ExchangeRateUpdater newUpdater = new ExchangeRateUpdater(deployer);
-        
-        vm.expectRevert("ExchangeRateUpdater: tokenContract is the zero address");
+
+        vm.expectRevert(
+            "ExchangeRateUpdater: tokenContract is the zero address"
+        );
         newUpdater.initialize(owner, address(0));
     }
 
     function test_Initialize_RevertWhen_NotOwner() public {
         ExchangeRateUpdater newUpdater = new ExchangeRateUpdater(deployer);
-        
+
         vm.prank(nonCaller);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", nonCaller));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)", nonCaller
+            )
+        );
         newUpdater.initialize(owner, address(stakedToken));
     }
 
@@ -145,10 +151,10 @@ contract ExchangeRateUpdaterTest is Test {
         uint256 newRate = INITIAL_EXCHANGE_RATE + 5e15; // 0.5% increase
 
         vm.prank(caller1);
-        
+
         vm.expectEmit(true, false, false, true, address(exchangeRateUpdater));
         emit ExchangeRateUpdated(caller1, newRate);
-        
+
         exchangeRateUpdater.updateExchangeRate(newRate);
 
         assertEq(stakedToken.exchangeRate(), newRate);
@@ -202,7 +208,9 @@ contract ExchangeRateUpdaterTest is Test {
 
     function test_UpdateExchangeRate_RevertWhen_ZeroRate() public {
         vm.prank(caller1);
-        vm.expectRevert("ExchangeRateUpdater: new exchange rate must be greater than 0");
+        vm.expectRevert(
+            "ExchangeRateUpdater: new exchange rate must be greater than 0"
+        );
         exchangeRateUpdater.updateExchangeRate(0);
     }
 
@@ -218,7 +226,9 @@ contract ExchangeRateUpdaterTest is Test {
         uint256 newRate = INITIAL_EXCHANGE_RATE + excessiveChange;
 
         vm.prank(caller1);
-        vm.expectRevert("ExchangeRateUpdater: exchange rate update exceeds allowance");
+        vm.expectRevert(
+            "ExchangeRateUpdater: exchange rate update exceeds allowance"
+        );
         exchangeRateUpdater.updateExchangeRate(newRate);
     }
 
@@ -244,7 +254,7 @@ contract ExchangeRateUpdaterTest is Test {
 
         // Update by exactly the allowance amount
         uint256 newRate = INITIAL_EXCHANGE_RATE + exactAllowance;
-        
+
         vm.prank(caller2);
         exchangeRateUpdater.updateExchangeRate(newRate);
 
@@ -258,7 +268,7 @@ contract ExchangeRateUpdaterTest is Test {
         // Use up most of the allowance (90%)
         uint256 rateChange = ALLOWANCE * 9 / 10; // 0.9% of allowance
         uint256 newRate = INITIAL_EXCHANGE_RATE + rateChange;
-        
+
         vm.prank(caller1);
         exchangeRateUpdater.updateExchangeRate(newRate);
 
@@ -267,7 +277,7 @@ contract ExchangeRateUpdaterTest is Test {
 
         // Warp time and check estimated allowance
         vm.warp(block.timestamp + INTERVAL / 2);
-        
+
         uint256 estimated = exchangeRateUpdater.estimatedAllowance(caller1);
         // Should have replenished about half
         assertGt(estimated, remainingAllowance);
@@ -277,7 +287,7 @@ contract ExchangeRateUpdaterTest is Test {
         // Use up all allowance
         uint256 rateChange = ALLOWANCE;
         uint256 newRate = INITIAL_EXCHANGE_RATE + rateChange;
-        
+
         vm.prank(caller1);
         exchangeRateUpdater.updateExchangeRate(newRate);
 
@@ -285,7 +295,9 @@ contract ExchangeRateUpdaterTest is Test {
 
         // Try to update again - should fail
         vm.prank(caller1);
-        vm.expectRevert("ExchangeRateUpdater: exchange rate update exceeds allowance");
+        vm.expectRevert(
+            "ExchangeRateUpdater: exchange rate update exceeds allowance"
+        );
         exchangeRateUpdater.updateExchangeRate(newRate + 1);
 
         // Warp full interval to replenish
@@ -301,7 +313,9 @@ contract ExchangeRateUpdaterTest is Test {
 
     function test_RateLimit_ConfigureMultipleCallers() public {
         vm.startPrank(owner);
-        exchangeRateUpdater.configureCaller(caller2, ALLOWANCE * 2, INTERVAL * 2);
+        exchangeRateUpdater.configureCaller(
+            caller2, ALLOWANCE * 2, INTERVAL * 2
+        );
         vm.stopPrank();
 
         assertTrue(exchangeRateUpdater.callers(caller1));
@@ -336,7 +350,7 @@ contract ExchangeRateUpdaterTest is Test {
 
     function test_OracleIntegration_UpdateThroughExchangeRateUpdater() public {
         uint256 newRate = INITIAL_EXCHANGE_RATE + 5e15; // 0.5% increase
-        
+
         vm.prank(caller1);
         exchangeRateUpdater.updateExchangeRate(newRate);
 
@@ -373,7 +387,11 @@ contract ExchangeRateUpdaterTest is Test {
         exchangeRateUpdater.transferOwnership(newOwner);
 
         vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", owner));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)", owner
+            )
+        );
         exchangeRateUpdater.configureCaller(caller2, ALLOWANCE, INTERVAL);
     }
 
@@ -395,7 +413,7 @@ contract ExchangeRateUpdaterTest is Test {
         exchangeRateUpdater.configureCaller(caller2, largeAllowance, INTERVAL);
 
         uint256 largeRate = INITIAL_EXCHANGE_RATE + 5e17; // 50% increase
-        
+
         vm.prank(caller2);
         exchangeRateUpdater.updateExchangeRate(largeRate);
 
@@ -426,7 +444,9 @@ contract ExchangeRateUpdaterTest is Test {
 
     // ============ Fuzz Tests ============
 
-    function testFuzz_UpdateExchangeRate_ValidChanges(uint256 rateChange) public {
+    function testFuzz_UpdateExchangeRate_ValidChanges(uint256 rateChange)
+        public
+    {
         // Bound rate change to valid range
         vm.assume(rateChange > 0 && rateChange <= ALLOWANCE);
 
@@ -438,7 +458,9 @@ contract ExchangeRateUpdaterTest is Test {
         assertEq(stakedToken.exchangeRate(), newRate);
     }
 
-    function testFuzz_UpdateExchangeRate_AllowanceDecrease(uint256 rateChange) public {
+    function testFuzz_UpdateExchangeRate_AllowanceDecrease(uint256 rateChange)
+        public
+    {
         vm.assume(rateChange > 0 && rateChange <= ALLOWANCE);
 
         uint256 initialAllowance = exchangeRateUpdater.allowances(caller1);
@@ -447,10 +469,9 @@ contract ExchangeRateUpdaterTest is Test {
         vm.prank(caller1);
         exchangeRateUpdater.updateExchangeRate(newRate);
 
-        assertEq(exchangeRateUpdater.allowances(caller1), initialAllowance - rateChange);
+        assertEq(
+            exchangeRateUpdater.allowances(caller1),
+            initialAllowance - rateChange
+        );
     }
-
 }
-
-
-

@@ -11,3 +11,7 @@ remappings = [
 # Solidity compiler settings
 optimizer = true
 optimizer_runs = 1000000
+
+[fmt]
+line_length = 80
+ignore = ["**/Proxy.sol", "**/Token.sol", "**/ExchangeRateUpdater.sol", "**/ExchangeRateUtil.sol", "**/RateLimit.sol", "**/StakedTokenV1.sol"]

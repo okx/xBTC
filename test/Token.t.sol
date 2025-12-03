@@ -30,11 +30,17 @@ contract TokenTest is Test {
     // Events
     event AddedToDenyList(address indexed account);
     event RemovedFromDenyList(address indexed account);
-    event MinterTransferred(address indexed previousMinter, address indexed newMinter);
-    event DenyListerTransferred(address indexed previousDenyLister, address indexed newDenyLister);
+    event MinterTransferred(
+        address indexed previousMinter, address indexed newMinter
+    );
+    event DenyListerTransferred(
+        address indexed previousDenyLister, address indexed newDenyLister
+    );
     event Mint(address indexed to, uint256 amount);
     event Burn(address indexed from, uint256 amount);
-    event ReceiverSet(address indexed previousReceiver, address indexed newReceiver);
+    event ReceiverSet(
+        address indexed previousReceiver, address indexed newReceiver
+    );
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -161,7 +167,11 @@ contract TokenTest is Test {
 
     function test_Mint_RevertWhen_ExceedsMaxSupply() public {
         vm.prank(minter);
-        vm.expectRevert(abi.encodeWithSelector(Token.ExceedsMaxSupply.selector, MAX_SUPPLY + 1, MAX_SUPPLY));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Token.ExceedsMaxSupply.selector, MAX_SUPPLY + 1, MAX_SUPPLY
+            )
+        );
         token.mint(receiver, MAX_SUPPLY + 1);
     }
 
@@ -211,7 +221,9 @@ contract TokenTest is Test {
 
     function test_Burn_RevertWhen_InsufficientBalance() public {
         vm.prank(minter);
-        vm.expectRevert(abi.encodeWithSelector(Token.InsufficientBalance.selector, 0, 1000));
+        vm.expectRevert(
+            abi.encodeWithSelector(Token.InsufficientBalance.selector, 0, 1000)
+        );
         token.burn(1000);
     }
 
@@ -501,7 +513,9 @@ contract TokenTest is Test {
 
         // Try to transfer from denied address
         vm.prank(receiver);
-        vm.expectRevert(abi.encodeWithSelector(Token.SenderInDenyList.selector, receiver));
+        vm.expectRevert(
+            abi.encodeWithSelector(Token.SenderInDenyList.selector, receiver)
+        );
         token.transfer(user1, 100);
     }
 
@@ -516,7 +530,9 @@ contract TokenTest is Test {
 
         // Try to transfer to denied address
         vm.prank(receiver);
-        vm.expectRevert(abi.encodeWithSelector(Token.RecipientInDenyList.selector, user1));
+        vm.expectRevert(
+            abi.encodeWithSelector(Token.RecipientInDenyList.selector, user1)
+        );
         token.transfer(user1, 100);
     }
 
@@ -535,7 +551,9 @@ contract TokenTest is Test {
 
         // Try to transfer from denied address
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Token.SenderInDenyList.selector, receiver));
+        vm.expectRevert(
+            abi.encodeWithSelector(Token.SenderInDenyList.selector, receiver)
+        );
         token.transferFrom(receiver, user1, 100);
     }
 
@@ -554,7 +572,9 @@ contract TokenTest is Test {
 
         // Try to transfer to denied address
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Token.RecipientInDenyList.selector, user2));
+        vm.expectRevert(
+            abi.encodeWithSelector(Token.RecipientInDenyList.selector, user2)
+        );
         token.transferFrom(receiver, user2, 100);
     }
 
@@ -585,7 +605,9 @@ contract TokenTest is Test {
         assertEq(token.balanceOf(receiver), amount);
     }
 
-    function testFuzz_Burn_ValidAmount(uint256 mintAmount, uint256 burnAmount) public {
+    function testFuzz_Burn_ValidAmount(uint256 mintAmount, uint256 burnAmount)
+        public
+    {
         vm.assume(mintAmount > 0 && mintAmount <= MAX_SUPPLY);
         vm.assume(burnAmount > 0 && burnAmount <= mintAmount);
 
@@ -794,4 +816,3 @@ contract TokenERC20Test is Test {
         assertEq(token.totalSupply(), amount);
     }
 }
-

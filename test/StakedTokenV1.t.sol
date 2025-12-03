@@ -147,4 +147,3 @@ contract StakedTokenV1Test is Test {
         assertEq(stakedToken.exchangeRate(), rate);
     }
 }
-
