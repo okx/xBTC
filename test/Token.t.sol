@@ -18,8 +18,7 @@ contract TokenTest is Test {
     Token public token;
     Proxy public proxy;
 
-    address public proxyAdmin; // Separate proxy admin to avoid TransparentProxy interception
-    address public admin;
+    address public admin; // Same address for proxy admin owner and DEFAULT_ADMIN_ROLE
     address public denyLister;
     address public minter;
     address public receiver;
@@ -45,7 +44,6 @@ contract TokenTest is Test {
     );
 
     function setUp() public {
-        proxyAdmin = makeAddr("proxyAdmin");
         admin = makeAddr("admin");
         denyLister = makeAddr("denyLister");
         minter = makeAddr("minter");
@@ -68,9 +66,11 @@ contract TokenTest is Test {
             MAX_SUPPLY
         );
 
-        // Deploy proxy with separate proxyAdmin to avoid TransparentProxy interception
-        // when admin calls grantRole/revokeRole
-        proxy = new Proxy(address(implementation), proxyAdmin, initData);
+        // Deploy proxy with admin as both proxy admin owner and DEFAULT_ADMIN_ROLE holder
+        // Note: In OZ v5 TransparentUpgradeableProxy, a ProxyAdmin CONTRACT is created
+        // and admin becomes its OWNER. Calls from admin go through normally because
+        // admin address != ProxyAdmin contract address.
+        proxy = new Proxy(address(implementation), admin, initData);
         token = Token(address(proxy));
     }
 
