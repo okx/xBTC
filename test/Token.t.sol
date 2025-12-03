@@ -18,6 +18,7 @@ contract TokenTest is Test {
     Token public token;
     Proxy public proxy;
 
+    address public proxyAdmin; // Separate proxy admin to avoid TransparentProxy interception
     address public admin;
     address public denyLister;
     address public minter;
@@ -44,6 +45,7 @@ contract TokenTest is Test {
     );
 
     function setUp() public {
+        proxyAdmin = makeAddr("proxyAdmin");
         admin = makeAddr("admin");
         denyLister = makeAddr("denyLister");
         minter = makeAddr("minter");
@@ -66,8 +68,9 @@ contract TokenTest is Test {
             MAX_SUPPLY
         );
 
-        // Deploy proxy
-        proxy = new Proxy(address(implementation), admin, initData);
+        // Deploy proxy with separate proxyAdmin to avoid TransparentProxy interception
+        // when admin calls grantRole/revokeRole
+        proxy = new Proxy(address(implementation), proxyAdmin, initData);
         token = Token(address(proxy));
     }
 
@@ -439,6 +442,213 @@ contract TokenTest is Test {
         vm.prank(user1);
         vm.expectRevert();
         token.batchRemoveFromDenyList(accounts);
+    }
+
+    // ============ Admin Grant/Revoke Role Tests ============
+
+    function test_AdminGrantMinterRole_Success() public {
+        address newMinter = makeAddr("newMinter");
+        bytes32 minterRole = token.MINTER_ROLE();
+
+        vm.prank(admin);
+        token.grantRole(minterRole, newMinter);
+
+        assertTrue(token.hasRole(minterRole, newMinter));
+        // Original minter still has role
+        assertTrue(token.hasRole(minterRole, minter));
+    }
+
+    function test_AdminGrantDenyListerRole_Success() public {
+        address newDenyLister = makeAddr("newDenyLister");
+        bytes32 denyListerRole = token.DENY_LISTER_ROLE();
+
+        vm.prank(admin);
+        token.grantRole(denyListerRole, newDenyLister);
+
+        assertTrue(token.hasRole(denyListerRole, newDenyLister));
+        // Original deny lister still has role
+        assertTrue(token.hasRole(denyListerRole, denyLister));
+    }
+
+    function test_AdminGrantAdminRole_Success() public {
+        address newAdmin = makeAddr("newAdmin");
+        bytes32 adminRole = token.DEFAULT_ADMIN_ROLE();
+
+        vm.prank(admin);
+        token.grantRole(adminRole, newAdmin);
+
+        assertTrue(token.hasRole(adminRole, newAdmin));
+        // Original admin still has role
+        assertTrue(token.hasRole(adminRole, admin));
+    }
+
+    function test_AdminRevokeMinterRole_Success() public {
+        bytes32 minterRole = token.MINTER_ROLE();
+
+        vm.prank(admin);
+        token.revokeRole(minterRole, minter);
+
+        assertFalse(token.hasRole(minterRole, minter));
+    }
+
+    function test_AdminRevokeDenyListerRole_Success() public {
+        bytes32 denyListerRole = token.DENY_LISTER_ROLE();
+
+        vm.prank(admin);
+        token.revokeRole(denyListerRole, denyLister);
+
+        assertFalse(token.hasRole(denyListerRole, denyLister));
+    }
+
+    function test_AdminRevokeAdminRole_Success() public {
+        // First grant admin to another address
+        address newAdmin = makeAddr("newAdmin");
+        bytes32 adminRole = token.DEFAULT_ADMIN_ROLE();
+
+        vm.prank(admin);
+        token.grantRole(adminRole, newAdmin);
+
+        // Revoke original admin
+        vm.prank(newAdmin);
+        token.revokeRole(adminRole, admin);
+
+        assertFalse(token.hasRole(adminRole, admin));
+        assertTrue(token.hasRole(adminRole, newAdmin));
+    }
+
+    function test_GrantRole_RevertWhen_NotAdmin() public {
+        address newMinter = makeAddr("newMinter");
+        bytes32 minterRole = token.MINTER_ROLE();
+
+        vm.prank(user1);
+        vm.expectRevert();
+        token.grantRole(minterRole, newMinter);
+    }
+
+    function test_RevokeRole_RevertWhen_NotAdmin() public {
+        bytes32 minterRole = token.MINTER_ROLE();
+
+        vm.prank(user1);
+        vm.expectRevert();
+        token.revokeRole(minterRole, minter);
+    }
+
+    function test_MinterCannotGrantMinterRole() public {
+        address newMinter = makeAddr("newMinter");
+        bytes32 minterRole = token.MINTER_ROLE();
+
+        vm.prank(minter);
+        vm.expectRevert();
+        token.grantRole(minterRole, newMinter);
+    }
+
+    function test_DenyListerCannotGrantDenyListerRole() public {
+        address newDenyLister = makeAddr("newDenyLister");
+        bytes32 denyListerRole = token.DENY_LISTER_ROLE();
+
+        vm.prank(denyLister);
+        vm.expectRevert();
+        token.grantRole(denyListerRole, newDenyLister);
+    }
+
+    function test_RevokedMinterCannotMint() public {
+        bytes32 minterRole = token.MINTER_ROLE();
+
+        // Admin revokes minter role
+        vm.prank(admin);
+        token.revokeRole(minterRole, minter);
+
+        // Minter tries to mint
+        vm.prank(minter);
+        vm.expectRevert();
+        token.mint(receiver, 1000);
+    }
+
+    function test_RevokedDenyListerCannotPause() public {
+        bytes32 denyListerRole = token.DENY_LISTER_ROLE();
+
+        // Admin revokes deny lister role
+        vm.prank(admin);
+        token.revokeRole(denyListerRole, denyLister);
+
+        // Deny lister tries to pause
+        vm.prank(denyLister);
+        vm.expectRevert();
+        token.pause();
+    }
+
+    function test_NewlyGrantedMinterCanMint() public {
+        address newMinter = makeAddr("newMinter");
+        bytes32 minterRole = token.MINTER_ROLE();
+
+        // Admin grants minter role
+        vm.prank(admin);
+        token.grantRole(minterRole, newMinter);
+
+        // New minter can mint
+        vm.prank(newMinter);
+        token.mint(receiver, 1000);
+
+        assertEq(token.balanceOf(receiver), 1000);
+    }
+
+    function test_NewlyGrantedDenyListerCanPause() public {
+        address newDenyLister = makeAddr("newDenyLister");
+        bytes32 denyListerRole = token.DENY_LISTER_ROLE();
+
+        // Admin grants deny lister role
+        vm.prank(admin);
+        token.grantRole(denyListerRole, newDenyLister);
+
+        // New deny lister can pause
+        vm.prank(newDenyLister);
+        token.pause();
+
+        assertTrue(token.paused());
+    }
+
+    function test_RenounceRole_Success() public {
+        bytes32 minterRole = token.MINTER_ROLE();
+
+        // Minter renounces their own role
+        vm.prank(minter);
+        token.renounceRole(minterRole, minter);
+
+        assertFalse(token.hasRole(minterRole, minter));
+    }
+
+    function test_RenounceRole_RevertWhen_RenouncingOthersRole() public {
+        bytes32 minterRole = token.MINTER_ROLE();
+
+        // User1 tries to renounce minter's role
+        vm.prank(user1);
+        vm.expectRevert();
+        token.renounceRole(minterRole, minter);
+    }
+
+    function test_MultipleRoleHolders() public {
+        address minter2 = makeAddr("minter2");
+        address minter3 = makeAddr("minter3");
+        bytes32 minterRole = token.MINTER_ROLE();
+
+        // Admin grants minter role to multiple addresses
+        vm.startPrank(admin);
+        token.grantRole(minterRole, minter2);
+        token.grantRole(minterRole, minter3);
+        vm.stopPrank();
+
+        // All three can mint
+        assertTrue(token.hasRole(minterRole, minter));
+        assertTrue(token.hasRole(minterRole, minter2));
+        assertTrue(token.hasRole(minterRole, minter3));
+
+        // Revoke one, others still work
+        vm.prank(admin);
+        token.revokeRole(minterRole, minter2);
+
+        assertFalse(token.hasRole(minterRole, minter2));
+        assertTrue(token.hasRole(minterRole, minter));
+        assertTrue(token.hasRole(minterRole, minter3));
     }
 
     // ============ Transfer Role Tests ============
