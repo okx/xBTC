@@ -3,11 +3,6 @@ pragma solidity 0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
 import {Token} from "../contracts/Token.sol";
-import {xBTC} from "../contracts/xBTC.sol";
-import {xETH} from "../contracts/xETH.sol";
-import {xSOL} from "../contracts/xSOL.sol";
-import {xBETH} from "../contracts/xBETH.sol";
-import {xOKSOL} from "../contracts/xOKSOL.sol";
 import {Proxy} from "../contracts/Proxy.sol";
 
 /**
@@ -839,118 +834,6 @@ contract TokenTest is Test {
         token.burn(burnAmount);
 
         assertEq(token.balanceOf(minter), mintAmount - burnAmount);
-    }
-}
-
-/**
- * @title TokenDecimalsTest
- * @notice Tests for all token contracts' decimals functions
- */
-contract TokenDecimalsTest is Test {
-    address public admin;
-    address public denyLister;
-    address public minter;
-    address public receiver;
-
-    uint256 public constant MAX_SUPPLY_18 = 100_000_000 * 10 ** 18;
-    uint256 public constant MAX_SUPPLY_9 = 100_000_000 * 10 ** 9;
-    uint256 public constant MAX_SUPPLY_8 = 100_000_000 * 10 ** 8;
-
-    function setUp() public {
-        admin = makeAddr("admin");
-        denyLister = makeAddr("denyLister");
-        minter = makeAddr("minter");
-        receiver = makeAddr("receiver");
-    }
-
-    function test_xBTC_Decimals() public {
-        xBTC implementation = new xBTC();
-        bytes memory initData = abi.encodeWithSelector(
-            Token.initialize.selector,
-            "xBTC",
-            "xBTC",
-            admin,
-            denyLister,
-            minter,
-            receiver,
-            MAX_SUPPLY_8
-        );
-        Proxy proxy = new Proxy(address(implementation), admin, initData);
-        xBTC token = xBTC(address(proxy));
-
-        assertEq(token.decimals(), 8);
-    }
-
-    function test_xETH_Decimals() public {
-        xETH implementation = new xETH();
-        bytes memory initData = abi.encodeWithSelector(
-            Token.initialize.selector,
-            "xETH",
-            "xETH",
-            admin,
-            denyLister,
-            minter,
-            receiver,
-            MAX_SUPPLY_18
-        );
-        Proxy proxy = new Proxy(address(implementation), admin, initData);
-        xETH token = xETH(address(proxy));
-
-        assertEq(token.decimals(), 18);
-    }
-
-    function test_xSOL_Decimals() public {
-        xSOL implementation = new xSOL();
-        bytes memory initData = abi.encodeWithSelector(
-            Token.initialize.selector,
-            "xSOL",
-            "xSOL",
-            admin,
-            denyLister,
-            minter,
-            receiver,
-            MAX_SUPPLY_9
-        );
-        Proxy proxy = new Proxy(address(implementation), admin, initData);
-        xSOL token = xSOL(address(proxy));
-
-        assertEq(token.decimals(), 9);
-    }
-
-    function test_xBETH_Decimals() public {
-        xBETH implementation = new xBETH();
-        bytes memory initData = abi.encodeWithSelector(
-            Token.initialize.selector,
-            "xBETH",
-            "xBETH",
-            admin,
-            denyLister,
-            minter,
-            receiver,
-            MAX_SUPPLY_18
-        );
-        Proxy proxy = new Proxy(address(implementation), admin, initData);
-        xBETH token = xBETH(address(proxy));
-
-        assertEq(token.decimals(), 18);
-    }
-
-    function test_xOKSOL_Decimals() public {
-        xOKSOL implementation = new xOKSOL();
-        bytes memory initData = abi.encodeWithSelector(
-            Token.initialize.selector,
-            "xOKSOL",
-            "xOKSOL",
-            admin,
-            denyLister,
-            minter,
-            receiver,
-            MAX_SUPPLY_9
-        );
-        Proxy proxy = new Proxy(address(implementation), admin, initData);
-        xOKSOL token = xOKSOL(address(proxy));
-
-        assertEq(token.decimals(), 9);
     }
 }
 
