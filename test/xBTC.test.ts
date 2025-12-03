@@ -8,11 +8,13 @@ const { ethers } = hre;
 describe("xBTC Contract", function () {
   let xBTC: any;
   let admin: Signer;
+  let denyLister: Signer;
   let minter: Signer;
   let user1: Signer;
   let user2: Signer;
   let blocked: Signer;
   let adminAddress: string;
+  let denyListerAddress: string;
   let minterAddress: string;
   let user1Address: string;
   let user2Address: string;
@@ -26,8 +28,9 @@ describe("xBTC Contract", function () {
   const MAX_SUPPLY = 21_000_000n * 10n ** 8n;
 
   beforeEach(async function () {
-    [admin, minter, user1, user2, blocked] = await ethers.getSigners();
+    [admin, denyLister, minter, user1, user2, blocked] = await ethers.getSigners();
     adminAddress = await admin.getAddress();
+    denyListerAddress = await denyLister.getAddress();
     minterAddress = await minter.getAddress();
     user1Address = await user1.getAddress();
     user2Address = await user2.getAddress();
@@ -40,7 +43,7 @@ describe("xBTC Contract", function () {
     // Prepare initialization data
     const initData = implementation.interface.encodeFunctionData(
       "initialize", 
-      [TOKEN_NAME, TOKEN_SYMBOL, adminAddress, minterAddress, user1Address, MAX_SUPPLY]
+      [TOKEN_NAME, TOKEN_SYMBOL, adminAddress, denyListerAddress, minterAddress, user1Address, MAX_SUPPLY]
     );
 
     // Deploy proxy
@@ -66,14 +69,14 @@ describe("xBTC Contract", function () {
 
     it("Should grant correct roles on initialization", async function () {
       expect(await xBTC.hasRole(DEFAULT_ADMIN_ROLE, adminAddress)).to.be.true;
-      expect(await xBTC.hasRole(DENY_LISTER_ROLE, adminAddress)).to.be.true;
+      expect(await xBTC.hasRole(DENY_LISTER_ROLE, denyListerAddress)).to.be.true;
       expect(await xBTC.hasRole(MINTER_ROLE, minterAddress)).to.be.true;
       expect(await xBTC.hasRole(MINTER_ROLE, adminAddress)).to.be.false;
     });
 
     it("Should not allow re-initialization", async function () {
       await expect(
-        xBTC.initialize(TOKEN_NAME, TOKEN_SYMBOL, adminAddress, minterAddress, user1Address, MAX_SUPPLY)
+        xBTC.initialize(TOKEN_NAME, TOKEN_SYMBOL, adminAddress, denyListerAddress, minterAddress, user1Address, MAX_SUPPLY)
       ).to.be.revertedWithCustomError(xBTC, "InvalidInitialization");
     });
 
@@ -109,7 +112,7 @@ describe("xBTC Contract", function () {
 
     it("Should not allow setting zero address as receiver", async function () {
       await expect(
-        xBTC.connect(admin).setReceiver(ZeroAddress)
+        xBTC.connect(denyLister).setReceiver(ZeroAddress)
       ).to.be.revertedWithCustomError(xBTC, "ZeroAddress");
     });
 
@@ -131,9 +134,9 @@ describe("xBTC Contract", function () {
       const mintAmount = 1000n * 10n ** 8n;
       
       // Add the address to deny list first
-      await xBTC.connect(admin).addToDenyList(blockedAddress);
+      await xBTC.connect(denyLister).addToDenyList(blockedAddress);
       
-      await xBTC.connect(admin).setReceiver(blockedAddress);
+      await xBTC.connect(denyLister).setReceiver(blockedAddress);
       
       await expect(
         xBTC.connect(minter).mint(blockedAddress, mintAmount)
@@ -162,7 +165,7 @@ describe("xBTC Contract", function () {
       const burnAmount = 500n * 10n ** 8n;
       
       // First mint tokens to the minter
-      await xBTC.connect(admin).setReceiver(minterAddress);
+      await xBTC.connect(denyLister).setReceiver(minterAddress);
       await xBTC.connect(minter).mint(minterAddress, burnAmount);
       const initialBalance = await xBTC.balanceOf(minterAddress);
       
@@ -204,26 +207,26 @@ describe("xBTC Contract", function () {
   });
 
   describe("Deny List Management", function () {
-    it("Should allow admin to add addresses to deny list", async function () {
-      await expect(xBTC.connect(admin).addToDenyList(user1Address))
+    it("Should allow denyLister to add addresses to deny list", async function () {
+      await expect(xBTC.connect(denyLister).addToDenyList(user1Address))
         .to.emit(xBTC, "AddedToDenyList")
         .withArgs(user1Address);
 
       expect(await xBTC.denyList(user1Address)).to.be.true;
     });
 
-    it("Should allow admin to remove addresses from deny list", async function () {
+    it("Should allow denyLister to remove addresses from deny list", async function () {
       // Add to deny list first
-      await xBTC.connect(admin).addToDenyList(user1Address);
+      await xBTC.connect(denyLister).addToDenyList(user1Address);
       
-      await expect(xBTC.connect(admin).removeFromDenyList(user1Address))
+      await expect(xBTC.connect(denyLister).removeFromDenyList(user1Address))
         .to.emit(xBTC, "RemovedFromDenyList")
         .withArgs(user1Address);
 
       expect(await xBTC.denyList(user1Address)).to.be.false;
     });
 
-    it("Should not allow non-admin to add addresses to deny list", async function () {
+    it("Should not allow non-denyLister to add addresses to deny list", async function () {
       await expect(
         xBTC.connect(user1).addToDenyList(user2Address)
       ).to.be.revertedWithCustomError(xBTC, "AccessControlUnauthorizedAccount");
@@ -231,13 +234,13 @@ describe("xBTC Contract", function () {
 
     it("Should not allow adding zero address to deny list", async function () {
       await expect(
-        xBTC.connect(admin).addToDenyList(ZeroAddress)
+        xBTC.connect(denyLister).addToDenyList(ZeroAddress)
       ).to.be.revertedWithCustomError(xBTC, "ZeroAddress");
     });
 
     it("Should allow adding admin to deny list", async function () {
       await expect(
-        xBTC.connect(admin).addToDenyList(adminAddress)
+        xBTC.connect(denyLister).addToDenyList(adminAddress)
       ).to.emit(xBTC, "AddedToDenyList").withArgs(adminAddress);
       
       expect(await xBTC.denyList(adminAddress)).to.be.true;
@@ -245,7 +248,7 @@ describe("xBTC Contract", function () {
 
     it("Should allow adding minter to deny list", async function () {
       await expect(
-        xBTC.connect(admin).addToDenyList(minterAddress)
+        xBTC.connect(denyLister).addToDenyList(minterAddress)
       ).to.emit(xBTC, "AddedToDenyList").withArgs(minterAddress);
       
       expect(await xBTC.denyList(minterAddress)).to.be.true;
@@ -257,7 +260,7 @@ describe("xBTC Contract", function () {
       await xBTC.connect(minter).mint(user1Address, mintAmount);
       
       // Add user1 to deny list
-      await xBTC.connect(admin).addToDenyList(user1Address);
+      await xBTC.connect(denyLister).addToDenyList(user1Address);
       
       await expect(
         xBTC.connect(user1).transfer(user2Address, 100n * 10n ** 8n)
@@ -270,7 +273,7 @@ describe("xBTC Contract", function () {
       await xBTC.connect(minter).mint(user1Address, mintAmount);
       
       // Add user2 to deny list
-      await xBTC.connect(admin).addToDenyList(user2Address);
+      await xBTC.connect(denyLister).addToDenyList(user2Address);
       
       await expect(
         xBTC.connect(user1).transfer(user2Address, 100n * 10n ** 8n)
@@ -279,18 +282,18 @@ describe("xBTC Contract", function () {
   });
 
   describe("Pausing", function () {
-    it("Should allow admin to pause the contract", async function () {
-      await xBTC.connect(admin).pause();
+    it("Should allow denyLister to pause the contract", async function () {
+      await xBTC.connect(denyLister).pause();
       expect(await xBTC.paused()).to.be.true;
     });
 
-    it("Should allow admin to unpause the contract", async function () {
-      await xBTC.connect(admin).pause();
-      await xBTC.connect(admin).unpause();
+    it("Should allow denyLister to unpause the contract", async function () {
+      await xBTC.connect(denyLister).pause();
+      await xBTC.connect(denyLister).unpause();
       expect(await xBTC.paused()).to.be.false;
     });
 
-    it("Should not allow non-admin to pause", async function () {
+    it("Should not allow non-denyLister to pause", async function () {
       await expect(
         xBTC.connect(user1).pause()
       ).to.be.revertedWithCustomError(xBTC, "AccessControlUnauthorizedAccount");
@@ -302,7 +305,7 @@ describe("xBTC Contract", function () {
       await xBTC.connect(minter).mint(user1Address, mintAmount);
       
       // Pause the contract
-      await xBTC.connect(admin).pause();
+      await xBTC.connect(denyLister).pause();
       
       await expect(
         xBTC.connect(user1).transfer(user2Address, 100n * 10n ** 8n)
@@ -760,7 +763,7 @@ describe("xBTC Contract", function () {
   describe("Edge Cases and Error Conditions", function () {
     it("Should handle maximum supply correctly", async function () {
       // Mint exactly MAX_SUPPLY
-      await xBTC.connect(admin).setReceiver(user1Address);
+      await xBTC.connect(denyLister).setReceiver(user1Address);
       await expect(xBTC.connect(minter).mint(user1Address, MAX_SUPPLY))
         .to.emit(xBTC, "Mint")
         .withArgs(user1Address, MAX_SUPPLY);
@@ -817,10 +820,10 @@ describe("xBTC Contract", function () {
   });
 
   describe("Receiver Management", function () {
-    it("Should allow minter to set receiver", async function () {
+    it("Should allow denyLister to set receiver", async function () {
       // Initial receiver is user1Address (set during initialization)
       // Change it to user2Address
-      await expect(xBTC.connect(admin).setReceiver(user2Address))
+      await expect(xBTC.connect(denyLister).setReceiver(user2Address))
         .to.emit(xBTC, "ReceiverSet")
         .withArgs(user1Address, user2Address);
         
@@ -843,7 +846,7 @@ describe("xBTC Contract", function () {
       // Try to initialize with zero receiver
       const initData = implementation.interface.encodeFunctionData(
         "initialize", 
-        [TOKEN_NAME, TOKEN_SYMBOL, adminAddress, minterAddress, ZeroAddress, MAX_SUPPLY]
+        [TOKEN_NAME, TOKEN_SYMBOL, adminAddress, denyListerAddress, minterAddress, ZeroAddress, MAX_SUPPLY]
       );
 
       // This should revert during proxy deployment
@@ -860,7 +863,7 @@ describe("xBTC Contract", function () {
   describe("Coverage - Pause Functionality Edge Cases", function () {
     it("Should prevent minting when paused", async function () {
       // Pause the contract
-      await xBTC.connect(admin).pause();
+      await xBTC.connect(denyLister).pause();
       
       // Try to mint - should be blocked by whenNotPaused modifier
       await expect(
@@ -870,11 +873,11 @@ describe("xBTC Contract", function () {
 
     it("Should prevent burning when paused", async function () {
       // First mint some tokens to minter
-      await xBTC.connect(admin).setReceiver(minterAddress);
+      await xBTC.connect(denyLister).setReceiver(minterAddress);
       await xBTC.connect(minter).mint(minterAddress, 1000n * 10n ** 8n);
       
       // Pause the contract
-      await xBTC.connect(admin).pause();
+      await xBTC.connect(denyLister).pause();
       
       // Try to burn - should be blocked by whenNotPaused modifier
       await expect(
@@ -888,7 +891,7 @@ describe("xBTC Contract", function () {
       it("Should successfully add multiple addresses to deny list", async function () {
         const addresses = [user1Address, user2Address];
         
-        await expect(xBTC.connect(admin).batchAddToDenyList(addresses))
+        await expect(xBTC.connect(denyLister).batchAddToDenyList(addresses))
           .to.emit(xBTC, "AddedToDenyList")
           .withArgs(user1Address)
           .and.to.emit(xBTC, "AddedToDenyList")
@@ -898,7 +901,7 @@ describe("xBTC Contract", function () {
         expect(await xBTC.denyList(user2Address)).to.be.true;
       });
 
-      it("Should revert when non-admin calls batchAddToDenyList", async function () {
+      it("Should revert when non-denyLister calls batchAddToDenyList", async function () {
         await expect(
           xBTC.connect(user1).batchAddToDenyList([user2Address])
         ).to.be.revertedWithCustomError(xBTC, "AccessControlUnauthorizedAccount");
@@ -906,24 +909,24 @@ describe("xBTC Contract", function () {
 
       it("Should revert when empty array is passed to batchAddToDenyList", async function () {
         await expect(
-          xBTC.connect(admin).batchAddToDenyList([])
+          xBTC.connect(denyLister).batchAddToDenyList([])
         ).to.be.revertedWithCustomError(xBTC, "EmptyArray");
       });
 
       it("Should revert when zero address is in batchAddToDenyList array", async function () {
         await expect(
-          xBTC.connect(admin).batchAddToDenyList([user1Address, ZeroAddress])
+          xBTC.connect(denyLister).batchAddToDenyList([user1Address, ZeroAddress])
         ).to.be.revertedWithCustomError(xBTC, "ZeroAddress");
       });
 
       it("Should handle already denied addresses in batchAddToDenyList", async function () {
         // First add user1 to deny list
-        await xBTC.connect(admin).addToDenyList(user1Address);
+        await xBTC.connect(denyLister).addToDenyList(user1Address);
         
         // Now try to add user1 again along with user2
         // Should succeed but only emit event for user2
         await expect(
-          xBTC.connect(admin).batchAddToDenyList([user1Address, user2Address])
+          xBTC.connect(denyLister).batchAddToDenyList([user1Address, user2Address])
         )
           .to.emit(xBTC, "AddedToDenyList")
           .withArgs(user2Address);
@@ -937,12 +940,12 @@ describe("xBTC Contract", function () {
     describe("batchRemoveFromDenyList", function () {
       beforeEach(async function () {
         // Add some addresses to deny list first
-        await xBTC.connect(admin).batchAddToDenyList([user1Address, user2Address]);
+        await xBTC.connect(denyLister).batchAddToDenyList([user1Address, user2Address]);
       });
 
       it("Should successfully remove multiple addresses from deny list", async function () {
         await expect(
-          xBTC.connect(admin).batchRemoveFromDenyList([user1Address, user2Address])
+          xBTC.connect(denyLister).batchRemoveFromDenyList([user1Address, user2Address])
         )
           .to.emit(xBTC, "RemovedFromDenyList")
           .withArgs(user1Address)
@@ -954,7 +957,7 @@ describe("xBTC Contract", function () {
         expect(await xBTC.denyList(user2Address)).to.be.false;
       });
 
-      it("Should revert when non-admin calls batchRemoveFromDenyList", async function () {
+      it("Should revert when non-denyLister calls batchRemoveFromDenyList", async function () {
         await expect(
           xBTC.connect(user1).batchRemoveFromDenyList([user1Address])
         ).to.be.revertedWithCustomError(xBTC, "AccessControlUnauthorizedAccount");
@@ -962,18 +965,18 @@ describe("xBTC Contract", function () {
 
       it("Should revert when empty array is passed to batchRemoveFromDenyList", async function () {
         await expect(
-          xBTC.connect(admin).batchRemoveFromDenyList([])
+          xBTC.connect(denyLister).batchRemoveFromDenyList([])
         ).to.be.revertedWithCustomError(xBTC, "EmptyArray");
       });
 
       it("Should handle addresses not in deny list gracefully", async function () {
         // Remove user1 first
-        await xBTC.connect(admin).removeFromDenyList(user1Address);
+        await xBTC.connect(denyLister).removeFromDenyList(user1Address);
         
         // Now try to remove user1 again along with user2
         // Should only emit event for user2
         await expect(
-          xBTC.connect(admin).batchRemoveFromDenyList([user1Address, user2Address])
+          xBTC.connect(denyLister).batchRemoveFromDenyList([user1Address, user2Address])
         )
           .to.emit(xBTC, "RemovedFromDenyList")
           .withArgs(user2Address);
@@ -986,27 +989,27 @@ describe("xBTC Contract", function () {
   });
 
   describe("Coverage - Additional Access Control Edge Cases", function () {
-    it("Should revert when non-admin calls removeFromDenyList", async function () {
+    it("Should revert when non-denyLister calls removeFromDenyList", async function () {
       // First add address to deny list
-      await xBTC.connect(admin).addToDenyList(user1Address);
+      await xBTC.connect(denyLister).addToDenyList(user1Address);
       
-      // Try to remove with non-admin account
+      // Try to remove with non-denyLister account
       await expect(
         xBTC.connect(user2).removeFromDenyList(user1Address)
       ).to.be.revertedWithCustomError(xBTC, "AccessControlUnauthorizedAccount");
     });
 
-    it("Should revert when non-admin calls pause", async function () {
+    it("Should revert when non-denyLister calls pause", async function () {
       await expect(
         xBTC.connect(user1).pause()
       ).to.be.revertedWithCustomError(xBTC, "AccessControlUnauthorizedAccount");
     });
 
-    it("Should revert when non-admin calls unpause", async function () {
-      // First pause with admin
-      await xBTC.connect(admin).pause();
+    it("Should revert when non-denyLister calls unpause", async function () {
+      // First pause with denyLister
+      await xBTC.connect(denyLister).pause();
       
-      // Try to unpause with non-admin
+      // Try to unpause with non-denyLister
       await expect(
         xBTC.connect(user1).unpause()
       ).to.be.revertedWithCustomError(xBTC, "AccessControlUnauthorizedAccount");
@@ -1029,8 +1032,8 @@ describe("xBTC Contract", function () {
         expect(await xBTC.hasRole(MINTER_ROLE, minterAddress)).to.be.false;
         expect(await xBTC.hasRole(MINTER_ROLE, user1Address)).to.be.true;
 
-        // Verify new minter can mint (admin sets receiver since setReceiver requires DENY_LISTER_ROLE)
-        await xBTC.connect(admin).setReceiver(user2Address);
+        // Verify new minter can mint (denyLister sets receiver since setReceiver requires DENY_LISTER_ROLE)
+        await xBTC.connect(denyLister).setReceiver(user2Address);
         await expect(xBTC.connect(user1).mint(user2Address, ethers.parseUnits("1000", 8)))
           .to.not.be.reverted;
 
@@ -1058,16 +1061,16 @@ describe("xBTC Contract", function () {
     describe("Deny Lister Role Transfer", function () {
       it("Should allow current deny lister to transfer deny lister role", async function () {
         // Verify initial state
-        expect(await xBTC.hasRole(DENY_LISTER_ROLE, adminAddress)).to.be.true;
+        expect(await xBTC.hasRole(DENY_LISTER_ROLE, denyListerAddress)).to.be.true;
         expect(await xBTC.hasRole(DENY_LISTER_ROLE, user1Address)).to.be.false;
 
         // Transfer deny lister role
-        await expect(xBTC.connect(admin).transferDenyLister(user1Address))
+        await expect(xBTC.connect(denyLister).transferDenyLister(user1Address))
           .to.emit(xBTC, "DenyListerTransferred")
-          .withArgs(adminAddress, user1Address);
+          .withArgs(denyListerAddress, user1Address);
 
         // Verify role transfer
-        expect(await xBTC.hasRole(DENY_LISTER_ROLE, adminAddress)).to.be.false;
+        expect(await xBTC.hasRole(DENY_LISTER_ROLE, denyListerAddress)).to.be.false;
         expect(await xBTC.hasRole(DENY_LISTER_ROLE, user1Address)).to.be.true;
 
         // Verify new deny lister can pause
@@ -1075,7 +1078,7 @@ describe("xBTC Contract", function () {
           .to.not.be.reverted;
 
         // Verify old deny lister cannot pause
-        await expect(xBTC.connect(admin).unpause())
+        await expect(xBTC.connect(denyLister).unpause())
           .to.be.revertedWithCustomError(xBTC, "AccessControlUnauthorizedAccount");
       });
 
@@ -1085,12 +1088,12 @@ describe("xBTC Contract", function () {
       });
 
       it("Should not allow transfer to zero address", async function () {
-        await expect(xBTC.connect(admin).transferDenyLister(ZeroAddress))
+        await expect(xBTC.connect(denyLister).transferDenyLister(ZeroAddress))
           .to.be.revertedWithCustomError(xBTC, "ZeroAddress");
       });
 
       it("Should not allow transfer to same address", async function () {
-        await expect(xBTC.connect(admin).transferDenyLister(adminAddress))
+        await expect(xBTC.connect(denyLister).transferDenyLister(denyListerAddress))
           .to.be.revertedWithCustomError(xBTC, "SameValue");
       });
     });
@@ -1102,15 +1105,15 @@ describe("xBTC Contract", function () {
       });
 
       it("Should allow adding deny lister to deny list", async function () {
-        await expect(xBTC.connect(admin).addToDenyList(adminAddress))
+        await expect(xBTC.connect(denyLister).addToDenyList(denyListerAddress))
           .to.emit(xBTC, "AddedToDenyList")
-          .withArgs(adminAddress);
+          .withArgs(denyListerAddress);
 
-        expect(await xBTC.denyList(adminAddress)).to.be.true;
+        expect(await xBTC.denyList(denyListerAddress)).to.be.true;
       });
 
       it("Should allow adding minter to deny list", async function () {
-        await expect(xBTC.connect(admin).addToDenyList(minterAddress))
+        await expect(xBTC.connect(denyLister).addToDenyList(minterAddress))
           .to.emit(xBTC, "AddedToDenyList")
           .withArgs(minterAddress);
 
@@ -1118,30 +1121,30 @@ describe("xBTC Contract", function () {
       });
 
       it("Should allow batch adding roles to deny list", async function () {
-        const rolesToBlock = [adminAddress, minterAddress];
+        const rolesToBlock = [denyListerAddress, minterAddress];
         
-        await expect(xBTC.connect(admin).batchAddToDenyList(rolesToBlock))
+        await expect(xBTC.connect(denyLister).batchAddToDenyList(rolesToBlock))
           .to.emit(xBTC, "AddedToDenyList")
-          .withArgs(adminAddress)
+          .withArgs(denyListerAddress)
           .and.to.emit(xBTC, "AddedToDenyList")
           .withArgs(minterAddress);
 
-        expect(await xBTC.denyList(adminAddress)).to.be.true;
+        expect(await xBTC.denyList(denyListerAddress)).to.be.true;
         expect(await xBTC.denyList(minterAddress)).to.be.true;
       });
 
       it("Should prevent transfers from deny lister in deny list", async function () {
-        // Add admin to deny list
-        await xBTC.connect(admin).addToDenyList(adminAddress);
+        // Add denyLister to deny list
+        await xBTC.connect(denyLister).addToDenyList(denyListerAddress);
         
-        // Admin should not be able to transfer tokens
-        await expect(xBTC.connect(admin).transfer(user2Address, ethers.parseUnits("1", 8)))
+        // DenyLister should not be able to transfer tokens
+        await expect(xBTC.connect(denyLister).transfer(user2Address, ethers.parseUnits("1", 8)))
           .to.be.revertedWithCustomError(xBTC, "SenderInDenyList");
       });
 
       it("Should prevent minting when receiver is in deny list", async function () {
         // Add the authorized receiver to deny list
-        await xBTC.connect(admin).addToDenyList(user1Address);
+        await xBTC.connect(denyLister).addToDenyList(user1Address);
         
         // Minter should not be able to mint because recipient is in deny list
         await expect(xBTC.connect(minter).mint(user1Address, ethers.parseUnits("1000", 8)))
@@ -1150,7 +1153,7 @@ describe("xBTC Contract", function () {
 
       it("Should allow minting when minter is in deny list but receiver is not", async function () {
         // Add minter to deny list (but not the receiver)
-        await xBTC.connect(admin).addToDenyList(minterAddress);
+        await xBTC.connect(denyLister).addToDenyList(minterAddress);
         
         // Minter should still be able to mint (they have the role and recipient is not blocked)
         await expect(xBTC.connect(minter).mint(user1Address, ethers.parseUnits("1000", 8)))
@@ -1161,15 +1164,15 @@ describe("xBTC Contract", function () {
     describe("Edge Cases", function () {
       it("Should allow role transfer even when role holder is in deny list", async function () {
         // Add minter to deny list
-        await xBTC.connect(admin).addToDenyList(minterAddress);
+        await xBTC.connect(denyLister).addToDenyList(minterAddress);
         
         // Minter should still be able to transfer their role
         await expect(xBTC.connect(minter).transferMinter(user1Address))
           .to.emit(xBTC, "MinterTransferred")
           .withArgs(minterAddress, user1Address);
 
-        // New minter should be able to mint (not in deny list) - admin sets receiver
-        await xBTC.connect(admin).setReceiver(user2Address);
+        // New minter should be able to mint (not in deny list) - denyLister sets receiver
+        await xBTC.connect(denyLister).setReceiver(user2Address);
         await expect(xBTC.connect(user1).mint(user2Address, ethers.parseUnits("1000", 8)))
           .to.not.be.reverted;
       });
@@ -1178,14 +1181,14 @@ describe("xBTC Contract", function () {
         // Transfer minter: minter -> user1
         await xBTC.connect(minter).transferMinter(user1Address);
         
-        // Transfer deny lister: admin -> user2  
-        await xBTC.connect(admin).transferDenyLister(user2Address);
+        // Transfer deny lister: denyLister -> user2  
+        await xBTC.connect(denyLister).transferDenyLister(user2Address);
         
         // Verify final state
         expect(await xBTC.hasRole(MINTER_ROLE, user1Address)).to.be.true;
         expect(await xBTC.hasRole(DENY_LISTER_ROLE, user2Address)).to.be.true;
         expect(await xBTC.hasRole(MINTER_ROLE, minterAddress)).to.be.false;
-        expect(await xBTC.hasRole(DENY_LISTER_ROLE, adminAddress)).to.be.false;
+        expect(await xBTC.hasRole(DENY_LISTER_ROLE, denyListerAddress)).to.be.false;
 
         // New deny lister can set receiver and new minter can mint
         await xBTC.connect(user2).setReceiver(blockedAddress);

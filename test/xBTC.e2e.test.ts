@@ -28,11 +28,15 @@ describe("xBTC End-to-End Tests", function () {
   const MINTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
   const DEFAULT_DENY_LISTER_ROLE = ethers.ZeroHash;
 
+  let denyLister: Signer;
+  let denyListerAddress: string;
+  
   before(async function () {
     console.log("🚀 Starting xBTC End-to-End Deployment Test");
     
-    [admin, minter, treasury, newAdmin, user1, user2] = await ethers.getSigners();
+    [admin, denyLister, minter, treasury, newAdmin, user1, user2] = await ethers.getSigners();
     adminAddress = await admin.getAddress();
+    denyListerAddress = await denyLister.getAddress();
     minterAddress = await minter.getAddress();
     treasuryAddress = await treasury.getAddress();
     newAdminAddress = await newAdmin.getAddress();
@@ -41,6 +45,7 @@ describe("xBTC End-to-End Tests", function () {
 
     console.log("📋 Test Accounts:");
     console.log(`   Admin: ${adminAddress}`);
+    console.log(`   DenyLister: ${denyListerAddress}`);
     console.log(`   Minter: ${minterAddress}`);
     console.log(`   Treasury: ${treasuryAddress}`);
     console.log(`   New Admin: ${newAdminAddress}`);
@@ -61,7 +66,7 @@ describe("xBTC End-to-End Tests", function () {
       
       // Verify implementation is initialized (should revert)
       await expect(
-        implementation.initialize(TOKEN_CONFIG.NAME, TOKEN_CONFIG.SYMBOL, adminAddress, minterAddress, treasuryAddress, TOKEN_CONFIG.MAX_SUPPLY)
+        implementation.initialize(TOKEN_CONFIG.NAME, TOKEN_CONFIG.SYMBOL, adminAddress, denyListerAddress, minterAddress, treasuryAddress, TOKEN_CONFIG.MAX_SUPPLY)
       ).to.be.revertedWithCustomError(implementation, "InvalidInitialization");
       
       console.log("   ✅ Implementation deployment complete");
@@ -73,7 +78,7 @@ describe("xBTC End-to-End Tests", function () {
       // Encode initialization data
       const initData = implementation.interface.encodeFunctionData(
         "initialize", 
-        [TOKEN_CONFIG.NAME, TOKEN_CONFIG.SYMBOL, adminAddress, minterAddress, treasuryAddress, TOKEN_CONFIG.MAX_SUPPLY]
+        [TOKEN_CONFIG.NAME, TOKEN_CONFIG.SYMBOL, adminAddress, denyListerAddress, minterAddress, treasuryAddress, TOKEN_CONFIG.MAX_SUPPLY]
       );
       
       // Deploy xbtcProxy (TransparentUpgradeableProxy)
@@ -96,7 +101,7 @@ describe("xBTC End-to-End Tests", function () {
       expect(await xBTC.symbol()).to.equal(TOKEN_CONFIG.SYMBOL);
       expect(await xBTC.decimals()).to.equal(TOKEN_CONFIG.DECIMALS);
       expect(await xBTC.hasRole(DEFAULT_DENY_LISTER_ROLE, adminAddress)).to.be.true;
-      expect(await xBTC.hasRole(DENY_LISTER_ROLE, adminAddress)).to.be.true;
+      expect(await xBTC.hasRole(DENY_LISTER_ROLE, denyListerAddress)).to.be.true;
       expect(await xBTC.hasRole(MINTER_ROLE, minterAddress)).to.be.true;
       
       console.log("   ✅ Proxy deployment and initialization complete");
@@ -177,7 +182,7 @@ describe("xBTC End-to-End Tests", function () {
       const initialTotalSupply = await xBTC.totalSupply();
       
       // First mint tokens to the minter so they have tokens to burn
-      await xBTC.connect(admin).setReceiver(minterAddress);
+      await xBTC.connect(denyLister).setReceiver(minterAddress);
       await xBTC.connect(minter).mint(minterAddress, burnAmount);
       const initialMinterBalance = await xBTC.balanceOf(minterAddress);
       
@@ -198,9 +203,9 @@ describe("xBTC End-to-End Tests", function () {
       console.log("⏸️  Testing emergency pause...");
       
       // Pause the contract
-      await expect(xBTC.connect(admin).pause())
+      await expect(xBTC.connect(denyLister).pause())
         .to.emit(xBTC, "Paused")
-        .withArgs(adminAddress);
+        .withArgs(denyListerAddress);
       
       expect(await xBTC.paused()).to.be.true;
       
@@ -211,9 +216,9 @@ describe("xBTC End-to-End Tests", function () {
       ).to.be.revertedWithCustomError(xBTC, "EnforcedPause");
       
       // Unpause
-      await expect(xBTC.connect(admin).unpause())
+      await expect(xBTC.connect(denyLister).unpause())
         .to.emit(xBTC, "Unpaused")
-        .withArgs(adminAddress);
+        .withArgs(denyListerAddress);
       
       expect(await xBTC.paused()).to.be.false;
       
@@ -229,7 +234,7 @@ describe("xBTC End-to-End Tests", function () {
       console.log("🚫 Testing address blocking...");
       
       // Add user1 to deny list
-      await expect(xBTC.connect(admin).addToDenyList(user1Address))
+      await expect(xBTC.connect(denyLister).addToDenyList(user1Address))
         .to.emit(xBTC, "AddedToDenyList")
         .withArgs(user1Address);
       
@@ -247,7 +252,7 @@ describe("xBTC End-to-End Tests", function () {
       ).to.be.revertedWithCustomError(xBTC, "RecipientInDenyList");
       
       // Remove user1 from deny list
-      await expect(xBTC.connect(admin).removeFromDenyList(user1Address))
+      await expect(xBTC.connect(denyLister).removeFromDenyList(user1Address))
         .to.emit(xBTC, "RemovedFromDenyList")
         .withArgs(user1Address);
       
@@ -431,7 +436,7 @@ describe("xBTC End-to-End Tests", function () {
       
       // Test new minter functionality
       const mintAmount = ethers.parseUnits("500", TOKEN_CONFIG.DECIMALS);
-      await xBTC.connect(admin).setReceiver(user1Address);
+      await xBTC.connect(denyLister).setReceiver(user1Address);
       await expect(xBTC.connect(treasury).mint(user1Address, mintAmount))
         .to.emit(xBTC, "Mint")
         .withArgs(user1Address, mintAmount);

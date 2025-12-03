@@ -19,14 +19,19 @@ describe("xBTC Proxy Admin Transfer Tests", function () {
   const TOKEN_SYMBOL = "xBTC";
   const MAX_SUPPLY = 21_000_000n * 10n ** 8n;
 
+  let denyLister: string;
+  let denyListerSigner: any;
+  
   beforeEach(async function () {
     const signers = await ethers.getSigners();
     admin = await signers[0].getAddress();
-    minter = await signers[1].getAddress();
+    denyLister = await signers[1].getAddress();
+    minter = await signers[2].getAddress();
     user = await signers[3].getAddress();
-    newAdmin = await signers[2].getAddress();
+    newAdmin = await signers[4].getAddress();
     adminSigner = signers[0];
-    newAdminSigner = signers[2];
+    denyListerSigner = signers[1];
+    newAdminSigner = signers[4];
 
     // Deploy implementation
     implementation = await ethers.deployContract("Token");
@@ -35,7 +40,7 @@ describe("xBTC Proxy Admin Transfer Tests", function () {
     // Prepare initialization data
     const initData = implementation.interface.encodeFunctionData(
       "initialize", 
-      [TOKEN_NAME, TOKEN_SYMBOL, admin, minter, user, MAX_SUPPLY]
+      [TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, user, MAX_SUPPLY]
     );
 
     // Deploy proxy
@@ -133,7 +138,7 @@ describe("xBTC Proxy Admin Transfer Tests", function () {
   it("Should maintain proxy functionality after admin transfer", async function () {
     const mintAmount = ethers.parseUnits("1000", 8);
     const signers = await ethers.getSigners();
-    const minterSigner = signers[1];
+    const minterSigner = signers[2];
     const user = await signers[3].getAddress();
     
     // Transfer ownership first

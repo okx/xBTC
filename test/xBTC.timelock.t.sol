@@ -98,7 +98,8 @@ contract xBTCTimelockTest is Test {
             Token.initialize.selector,
             "Cross-Chain Bitcoin",
             "xBTC",
-            address(timelock), // denyLister (timelock has DEFAULT_ADMIN_ROLE)
+            address(timelock), // admin (timelock has DEFAULT_ADMIN_ROLE)
+            address(timelock), // denyLister (timelock has DENY_LISTER_ROLE)
             minter,
             receiver,
             MAX_SUPPLY

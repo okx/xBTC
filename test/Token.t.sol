@@ -19,6 +19,7 @@ contract TokenTest is Test {
     Proxy public proxy;
 
     address public admin;
+    address public denyLister;
     address public minter;
     address public receiver;
     address public user1;
@@ -44,6 +45,7 @@ contract TokenTest is Test {
 
     function setUp() public {
         admin = makeAddr("admin");
+        denyLister = makeAddr("denyLister");
         minter = makeAddr("minter");
         receiver = makeAddr("receiver");
         user1 = makeAddr("user1");
@@ -58,6 +60,7 @@ contract TokenTest is Test {
             "Test Token",
             "TEST",
             admin,
+            denyLister,
             minter,
             receiver,
             MAX_SUPPLY
@@ -76,7 +79,7 @@ contract TokenTest is Test {
         assertEq(token.MAX_SUPPLY(), MAX_SUPPLY);
         assertEq(token.authorizedReceiver(), receiver);
         assertTrue(token.hasRole(token.DEFAULT_ADMIN_ROLE(), admin));
-        assertTrue(token.hasRole(token.DENY_LISTER_ROLE(), admin));
+        assertTrue(token.hasRole(token.DENY_LISTER_ROLE(), denyLister));
         assertTrue(token.hasRole(token.MINTER_ROLE(), minter));
     }
 
@@ -87,6 +90,7 @@ contract TokenTest is Test {
             "Test Token",
             "TEST",
             admin,
+            denyLister,
             minter,
             address(0), // zero address receiver
             MAX_SUPPLY
@@ -103,6 +107,7 @@ contract TokenTest is Test {
             "Test Token",
             "TEST",
             admin,
+            denyLister,
             minter,
             receiver,
             0 // zero max supply
@@ -120,14 +125,14 @@ contract TokenTest is Test {
         vm.expectEmit(true, true, false, true);
         emit ReceiverSet(receiver, newReceiver);
 
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.setReceiver(newReceiver);
 
         assertEq(token.authorizedReceiver(), newReceiver);
     }
 
     function test_SetReceiver_RevertWhen_ZeroAddress() public {
-        vm.prank(admin);
+        vm.prank(denyLister);
         vm.expectRevert(Token.ZeroAddress.selector);
         token.setReceiver(address(0));
     }
@@ -176,7 +181,7 @@ contract TokenTest is Test {
     }
 
     function test_Mint_RevertWhen_Paused() public {
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.pause();
 
         vm.prank(minter);
@@ -234,7 +239,7 @@ contract TokenTest is Test {
         vm.prank(receiver);
         token.transfer(minter, 1000);
 
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.pause();
 
         vm.prank(minter);
@@ -251,17 +256,17 @@ contract TokenTest is Test {
     // ============ Pause/Unpause Tests ============
 
     function test_Pause_Success() public {
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.pause();
 
         assertTrue(token.paused());
     }
 
     function test_Unpause_Success() public {
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.pause();
 
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.unpause();
 
         assertFalse(token.paused());
@@ -274,7 +279,7 @@ contract TokenTest is Test {
     }
 
     function test_Unpause_RevertWhen_NotDenyLister() public {
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.pause();
 
         vm.prank(user1);
@@ -288,14 +293,14 @@ contract TokenTest is Test {
         vm.expectEmit(true, false, false, false);
         emit AddedToDenyList(user1);
 
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.addToDenyList(user1);
 
         assertTrue(token.denyList(user1));
     }
 
     function test_AddToDenyList_RevertWhen_ZeroAddress() public {
-        vm.prank(admin);
+        vm.prank(denyLister);
         vm.expectRevert(Token.ZeroAddress.selector);
         token.addToDenyList(address(0));
     }
@@ -307,13 +312,13 @@ contract TokenTest is Test {
     }
 
     function test_RemoveFromDenyList_Success() public {
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.addToDenyList(user1);
 
         vm.expectEmit(true, false, false, false);
         emit RemovedFromDenyList(user1);
 
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.removeFromDenyList(user1);
 
         assertFalse(token.denyList(user1));
@@ -333,7 +338,7 @@ contract TokenTest is Test {
         accounts[1] = user2;
         accounts[2] = makeAddr("user3");
 
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.batchAddToDenyList(accounts);
 
         assertTrue(token.denyList(user1));
@@ -343,7 +348,7 @@ contract TokenTest is Test {
 
     function test_BatchAddToDenyList_SkipsAlreadyDenied() public {
         // First add user1
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.addToDenyList(user1);
 
         // Batch add including already denied user1
@@ -351,7 +356,7 @@ contract TokenTest is Test {
         accounts[0] = user1;
         accounts[1] = user2;
 
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.batchAddToDenyList(accounts);
 
         assertTrue(token.denyList(user1));
@@ -361,7 +366,7 @@ contract TokenTest is Test {
     function test_BatchAddToDenyList_RevertWhen_EmptyArray() public {
         address[] memory accounts = new address[](0);
 
-        vm.prank(admin);
+        vm.prank(denyLister);
         vm.expectRevert(Token.EmptyArray.selector);
         token.batchAddToDenyList(accounts);
     }
@@ -371,7 +376,7 @@ contract TokenTest is Test {
         accounts[0] = user1;
         accounts[1] = address(0);
 
-        vm.prank(admin);
+        vm.prank(denyLister);
         vm.expectRevert(Token.ZeroAddress.selector);
         token.batchAddToDenyList(accounts);
     }
@@ -391,11 +396,11 @@ contract TokenTest is Test {
         accounts[0] = user1;
         accounts[1] = user2;
 
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.batchAddToDenyList(accounts);
 
         // Now remove
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.batchRemoveFromDenyList(accounts);
 
         assertFalse(token.denyList(user1));
@@ -404,7 +409,7 @@ contract TokenTest is Test {
 
     function test_BatchRemoveFromDenyList_SkipsNotDenied() public {
         // Only add user1
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.addToDenyList(user1);
 
         // Batch remove including user2 who is not denied
@@ -412,7 +417,7 @@ contract TokenTest is Test {
         accounts[0] = user1;
         accounts[1] = user2;
 
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.batchRemoveFromDenyList(accounts);
 
         assertFalse(token.denyList(user1));
@@ -422,7 +427,7 @@ contract TokenTest is Test {
     function test_BatchRemoveFromDenyList_RevertWhen_EmptyArray() public {
         address[] memory accounts = new address[](0);
 
-        vm.prank(admin);
+        vm.prank(denyLister);
         vm.expectRevert(Token.EmptyArray.selector);
         token.batchRemoveFromDenyList(accounts);
     }
@@ -473,25 +478,25 @@ contract TokenTest is Test {
         address newDenyLister = makeAddr("newDenyLister");
 
         vm.expectEmit(true, true, false, false);
-        emit DenyListerTransferred(admin, newDenyLister);
+        emit DenyListerTransferred(denyLister, newDenyLister);
 
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.transferDenyLister(newDenyLister);
 
         assertTrue(token.hasRole(token.DENY_LISTER_ROLE(), newDenyLister));
-        assertFalse(token.hasRole(token.DENY_LISTER_ROLE(), admin));
+        assertFalse(token.hasRole(token.DENY_LISTER_ROLE(), denyLister));
     }
 
     function test_TransferDenyLister_RevertWhen_ZeroAddress() public {
-        vm.prank(admin);
+        vm.prank(denyLister);
         vm.expectRevert(Token.ZeroAddress.selector);
         token.transferDenyLister(address(0));
     }
 
     function test_TransferDenyLister_RevertWhen_SameAddress() public {
-        vm.prank(admin);
+        vm.prank(denyLister);
         vm.expectRevert(Token.SameValue.selector);
-        token.transferDenyLister(admin);
+        token.transferDenyLister(denyLister);
     }
 
     function test_TransferDenyLister_RevertWhen_NotDenyLister() public {
@@ -508,7 +513,7 @@ contract TokenTest is Test {
         token.mint(receiver, 1000);
 
         // Add receiver to deny list
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.addToDenyList(receiver);
 
         // Try to transfer from denied address
@@ -525,7 +530,7 @@ contract TokenTest is Test {
         token.mint(receiver, 1000);
 
         // Add user1 to deny list
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.addToDenyList(user1);
 
         // Try to transfer to denied address
@@ -546,7 +551,7 @@ contract TokenTest is Test {
         token.approve(user1, 100);
 
         // Add receiver to deny list
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.addToDenyList(receiver);
 
         // Try to transfer from denied address
@@ -567,7 +572,7 @@ contract TokenTest is Test {
         token.approve(user1, 100);
 
         // Add user2 to deny list
-        vm.prank(admin);
+        vm.prank(denyLister);
         token.addToDenyList(user2);
 
         // Try to transfer to denied address
@@ -633,6 +638,7 @@ contract TokenTest is Test {
  */
 contract TokenDecimalsTest is Test {
     address public admin;
+    address public denyLister;
     address public minter;
     address public receiver;
 
@@ -642,6 +648,7 @@ contract TokenDecimalsTest is Test {
 
     function setUp() public {
         admin = makeAddr("admin");
+        denyLister = makeAddr("denyLister");
         minter = makeAddr("minter");
         receiver = makeAddr("receiver");
     }
@@ -653,6 +660,7 @@ contract TokenDecimalsTest is Test {
             "xBTC",
             "xBTC",
             admin,
+            denyLister,
             minter,
             receiver,
             MAX_SUPPLY_8
@@ -670,6 +678,7 @@ contract TokenDecimalsTest is Test {
             "xETH",
             "xETH",
             admin,
+            denyLister,
             minter,
             receiver,
             MAX_SUPPLY_18
@@ -687,6 +696,7 @@ contract TokenDecimalsTest is Test {
             "xSOL",
             "xSOL",
             admin,
+            denyLister,
             minter,
             receiver,
             MAX_SUPPLY_9
@@ -704,6 +714,7 @@ contract TokenDecimalsTest is Test {
             "xBETH",
             "xBETH",
             admin,
+            denyLister,
             minter,
             receiver,
             MAX_SUPPLY_18
@@ -721,6 +732,7 @@ contract TokenDecimalsTest is Test {
             "xOKSOL",
             "xOKSOL",
             admin,
+            denyLister,
             minter,
             receiver,
             MAX_SUPPLY_9
@@ -741,6 +753,7 @@ contract TokenERC20Test is Test {
     Proxy public proxy;
 
     address public admin;
+    address public denyLister;
     address public minter;
     address public receiver;
     address public user1;
@@ -751,6 +764,7 @@ contract TokenERC20Test is Test {
 
     function setUp() public {
         admin = makeAddr("admin");
+        denyLister = makeAddr("denyLister");
         minter = makeAddr("minter");
         receiver = makeAddr("receiver");
         user1 = makeAddr("user1");
@@ -762,6 +776,7 @@ contract TokenERC20Test is Test {
             "Test Token",
             "TEST",
             admin,
+            denyLister,
             minter,
             receiver,
             MAX_SUPPLY

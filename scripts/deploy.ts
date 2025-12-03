@@ -35,6 +35,7 @@ async function main() {
     TOKEN_CONFIG.NAME,
     TOKEN_CONFIG.SYMBOL,
     DEPLOYMENT_CONFIG.ADMIN,
+    DEPLOYMENT_CONFIG.DENY_LISTER,
     DEPLOYMENT_CONFIG.MINTER,
     DEPLOYMENT_CONFIG.TREASURY, // Initial receiver
     TOKEN_CONFIG.MAX_SUPPLY, // Max supply: 21M xBTC with 8 decimals
@@ -98,6 +99,7 @@ async function main() {
   console.log("Implementation Address:", deployedAddress_impl);
   console.log("Proxy Address:", deployedAddress_proxy);
   console.log("Admin Address:", DEPLOYMENT_CONFIG.ADMIN);
+  console.log("DenyLister Address:", DEPLOYMENT_CONFIG.DENY_LISTER);
   console.log("Minter Address:", DEPLOYMENT_CONFIG.MINTER);
   console.log("Treasury Address:", DEPLOYMENT_CONFIG.TREASURY);
   console.log("====================================");
