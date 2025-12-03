@@ -1,7 +1,16 @@
 {
-  "name": "xbtc_evm",
+  "name": "x-assets-evm",
   "version": "1.0.0",
   "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "OKX",
+    "url": "https://www.okx.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/okx/xBTC.git"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
