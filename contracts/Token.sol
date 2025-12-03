@@ -71,7 +71,8 @@ AccessControlUpgradeable
      * @dev Initializes the upgradeable contract with token details and role assignments
      * @param name The name of the token (e.g., "xBTC")
      * @param symbol The symbol of the token (e.g., "xBTC")
-     * @param denyLister The address that will receive DENY_LISTER_ROLE and DEFAULT_ADMIN_ROLE
+     * @param admin The address that will receive DEFAULT_ADMIN_ROLE
+     * @param denyLister The address that will receive DENY_LISTER_ROLE
      * @param minter The address that will receive MINTER_ROLE for minting/burning tokens
      * @param receiver The initial authorized receiver address for minting operations
      * @param maxSupply The maximum supply of tokens (with decimal places included)
@@ -79,6 +80,7 @@ AccessControlUpgradeable
     function initialize(
         string memory name,
         string memory symbol,
+        address admin,
         address denyLister,
         address minter,
         address receiver,
@@ -89,7 +91,7 @@ AccessControlUpgradeable
         __ERC20Permit_init(name);
         __AccessControl_init();
 
-        _grantRole(DEFAULT_ADMIN_ROLE, denyLister);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(DENY_LISTER_ROLE, denyLister);
         _grantRole(MINTER_ROLE, minter);
 
