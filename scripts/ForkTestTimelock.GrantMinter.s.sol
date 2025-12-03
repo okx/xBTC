@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "forge-std/Script.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "../contracts/Token.sol";
 
 /**
@@ -110,6 +111,42 @@ contract ForkTestTimelockGrantMinterRole is Script {
         bool isPaused = xbtcProxy.paused();
         console.log("xBTC Contract Paused:", isPaused);
 
+        console.log("");
+
+        // ========== Verify Timelock is both ProxyAdmin owner and DEFAULT_ADMIN_ROLE ==========
+        console.log("=== Timelock Admin Role Verification ===");
+
+        // 1. Get ProxyAdmin address from ERC1967 storage slot
+        bytes32 ADMIN_SLOT = bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
+        bytes32 proxyAdminSlot = vm.load(xbtcProxyAddress, ADMIN_SLOT);
+        address proxyAdminAddress = address(uint160(uint256(proxyAdminSlot)));
+        console.log("ProxyAdmin Contract Address:", proxyAdminAddress);
+
+        // 2. Check Timelock is the owner of ProxyAdmin
+        address proxyAdminOwner = Ownable(proxyAdminAddress).owner();
+        console.log("ProxyAdmin Owner:", proxyAdminOwner);
+        bool timelockIsProxyAdminOwner = (proxyAdminOwner == timelockAddress);
+        console.log("Timelock is ProxyAdmin Owner:", timelockIsProxyAdminOwner);
+        require(timelockIsProxyAdminOwner, "FAILED: Timelock is not ProxyAdmin owner");
+
+        // 3. Check Timelock has DEFAULT_ADMIN_ROLE in Token
+        bool timelockHasAdminRole = xbtcProxy.hasRole(DEFAULT_ADMIN_ROLE, timelockAddress);
+        console.log("Timelock has DEFAULT_ADMIN_ROLE:", timelockHasAdminRole);
+        require(timelockHasAdminRole, "FAILED: Timelock does not have DEFAULT_ADMIN_ROLE");
+
+        console.log("");
+        console.log("=== Why This Works (Timelock is both ProxyAdmin owner AND DEFAULT_ADMIN) ===");
+        console.log("In OZ v5 TransparentUpgradeableProxy:");
+        console.log("  1. ProxyAdmin CONTRACT is created automatically, Timelock is its OWNER");
+        console.log("  2. Proxy only intercepts calls FROM ProxyAdmin CONTRACT (not owner)");
+        console.log("  3. When Timelock calls proxy, msg.sender = Timelock != ProxyAdmin");
+        console.log("  4. So the call is delegated normally to Token implementation");
+        console.log("  5. Since Timelock has DEFAULT_ADMIN_ROLE, grantRole succeeds");
+        console.log("");
+        console.log("Key Insight: Timelock address != ProxyAdmin address");
+        console.log("  Timelock:", timelockAddress);
+        console.log("  ProxyAdmin:", proxyAdminAddress);
+        console.log("  These are DIFFERENT addresses, so no interception occurs!");
         console.log("");
     }
 
