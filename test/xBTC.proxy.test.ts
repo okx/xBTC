@@ -8,39 +8,35 @@ describe("xBTC Proxy Tests", function () {
   let proxy: any;
   let xBTC: any;
   let admin: string;
-  let denyLister: string;
   let minter: string;
   let user: string;
 
   const TOKEN_NAME = "Cross-Chain Bitcoin";
   const TOKEN_SYMBOL = "xBTC";
-  const MAX_SUPPLY = 21_000_000n * 10n ** 8n;
 
   beforeEach(async function () {
     const signers = await ethers.getSigners();
     admin = await signers[0].getAddress();
-    denyLister = await signers[1].getAddress();
-    minter = await signers[2].getAddress();
-    user = await signers[3].getAddress();
+    minter = await signers[1].getAddress();
+    user = await signers[2].getAddress();
     
     // Store signer references
     const adminSigner = signers[0];
-    const denyListerSigner = signers[1];
-    const minterSigner = signers[2];
-    const userSigner = signers[3];
+    const minterSigner = signers[1];
+    const userSigner = signers[2];
 
     // Deploy implementation
-    implementation = await ethers.deployContract("xBTC");
+    implementation = await ethers.deployContract("xbtc");
     await implementation.waitForDeployment();
 
     // Prepare initialization data
     const initData = implementation.interface.encodeFunctionData(
       "initialize", 
-      [TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, user, MAX_SUPPLY]
+      [TOKEN_NAME, TOKEN_SYMBOL, admin, minter, user]
     );
 
     // Deploy proxy
-    proxy = await ethers.deployContract("contracts/Proxy.sol:Proxy", [
+    proxy = await ethers.deployContract("xbtcProxy", [
       await implementation.getAddress(),
       admin, // proxy admin
       initData
@@ -62,17 +58,17 @@ describe("xBTC Proxy Tests", function () {
   it("Should have correct roles", async function () {
     const DENY_LISTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("DENY_LISTER_ROLE"));
     const MINTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
-    const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
+    const DEFAULT_DENY_LISTER_ROLE = ethers.ZeroHash;
 
-    expect(await xBTC.hasRole(DEFAULT_ADMIN_ROLE, admin)).to.be.true;
-    expect(await xBTC.hasRole(DENY_LISTER_ROLE, denyLister)).to.be.true;
+    expect(await xBTC.hasRole(DEFAULT_DENY_LISTER_ROLE, admin)).to.be.true;
+    expect(await xBTC.hasRole(DENY_LISTER_ROLE, admin)).to.be.true;
     expect(await xBTC.hasRole(MINTER_ROLE, minter)).to.be.true;
   });
 
   it("Should mint tokens", async function () {
     const mintAmount = ethers.parseUnits("1000", 8); // 1000 xBTC
     const signers = await ethers.getSigners();
-    const minterSigner = signers[2];
+    const minterSigner = signers[1];
     
     await expect(xBTC.connect(minterSigner).mint(user, mintAmount))
       .to.emit(xBTC, "Mint")
@@ -88,15 +84,14 @@ describe("xBTC Proxy Tests", function () {
     const mintAmount = ethers.parseUnits("1000", 8);
     const burnAmount = ethers.parseUnits("500", 8);
     const signers = await ethers.getSigners();
-    const denyListerSigner = signers[1];
-    const minterSigner = signers[2];
+    const minterSigner = signers[1];
     
     // First mint
     await xBTC.connect(minterSigner).mint(user, mintAmount);
     
     // First set receiver to minter so they can burn their own tokens
-    await xBTC.connect(denyListerSigner).setReceiver(minter);
-    await xBTC.connect(minterSigner).mint(minter, burnAmount);
+    await xBTC.connect(signers[0]).setReceiver(minter);
+    await xBTC.connect(signers[1]).mint(minter, burnAmount);
     
     // Then burn
     await expect(xBTC.connect(minterSigner).burn(burnAmount))
@@ -112,9 +107,9 @@ describe("xBTC Proxy Tests", function () {
     const mintAmount = ethers.parseUnits("1000", 8);
     const transferAmount = ethers.parseUnits("250", 8);
     const signers = await ethers.getSigners();
-    const minterSigner = signers[2];
-    const userSigner = signers[3];
-    const user2 = await signers[4].getAddress();
+    const minterSigner = signers[1];
+    const userSigner = signers[2];
+    const user2 = await signers[3].getAddress();
     
     // Mint to user
     await xBTC.connect(minterSigner).mint(user, mintAmount);
@@ -130,15 +125,15 @@ describe("xBTC Proxy Tests", function () {
 
   it("Should add and remove addresses from deny list", async function () {
     const signers = await ethers.getSigners();
-    const denyListerSigner = signers[1];
+    const adminSigner = signers[0];
     
-    await expect(xBTC.connect(denyListerSigner).addToDenyList(user))
+    await expect(xBTC.connect(adminSigner).addToDenyList(user))
       .to.emit(xBTC, "AddedToDenyList")
       .withArgs(user);
 
     expect(await xBTC.denyList(user)).to.be.true;
 
-    await expect(xBTC.connect(denyListerSigner).removeFromDenyList(user))
+    await expect(xBTC.connect(adminSigner).removeFromDenyList(user))
       .to.emit(xBTC, "RemovedFromDenyList")
       .withArgs(user);
 
@@ -149,16 +144,16 @@ describe("xBTC Proxy Tests", function () {
     const mintAmount = ethers.parseUnits("1000", 8);
     const transferAmount = ethers.parseUnits("100", 8);
     const signers = await ethers.getSigners();
-    const denyListerSigner = signers[1];
-    const minterSigner = signers[2];
-    const userSigner = signers[3];
-    const user2 = await signers[4].getAddress();
+    const adminSigner = signers[0];
+    const minterSigner = signers[1];
+    const userSigner = signers[2];
+    const user2 = await signers[3].getAddress();
     
     // Mint tokens
     await xBTC.connect(minterSigner).mint(user, mintAmount);
     
     // Pause the contract
-    await xBTC.connect(denyListerSigner).pause();
+    await xBTC.connect(adminSigner).pause();
     expect(await xBTC.paused()).to.be.true;
 
     // Try to transfer (should fail)
@@ -167,7 +162,7 @@ describe("xBTC Proxy Tests", function () {
     ).to.be.revertedWithCustomError(xBTC, "EnforcedPause");
 
     // Unpause and transfer should work
-    await xBTC.connect(denyListerSigner).unpause();
+    await xBTC.connect(adminSigner).unpause();
     expect(await xBTC.paused()).to.be.false;
 
     await expect(xBTC.connect(userSigner).transfer(user2, transferAmount))
@@ -179,19 +174,19 @@ describe("xBTC Proxy Tests", function () {
     const mintAmount = ethers.parseUnits("1000", 8);
     const transferAmount = ethers.parseUnits("100", 8);
     const signers = await ethers.getSigners();
-    const denyListerSigner = signers[1];
-    const minterSigner = signers[2];
-    const userSigner = signers[3];
-    const user2 = await signers[4].getAddress();
-    const user2Signer = signers[4];
+    const adminSigner = signers[0];
+    const minterSigner = signers[1];
+    const userSigner = signers[2];
+    const user2 = await signers[3].getAddress();
+    const user2Signer = signers[3];
     
     // Mint tokens to both users
     await xBTC.connect(minterSigner).mint(user, mintAmount);
-    await xBTC.connect(denyListerSigner).setReceiver(user2);
+    await xBTC.connect(adminSigner).setReceiver(user2);
     await xBTC.connect(minterSigner).mint(user2, mintAmount);
     
     // Add user to deny list
-    await xBTC.connect(denyListerSigner).addToDenyList(user);
+    await xBTC.connect(adminSigner).addToDenyList(user);
     
     // Try transfer from blocked address (should fail)
     await expect(
@@ -204,7 +199,7 @@ describe("xBTC Proxy Tests", function () {
           ).to.be.revertedWithCustomError(xBTC, "RecipientInDenyList");
 
     // Remove from deny list and transfers should work
-    await xBTC.connect(denyListerSigner).removeFromDenyList(user);
+    await xBTC.connect(adminSigner).removeFromDenyList(user);
 
     await expect(xBTC.connect(userSigner).transfer(user2, transferAmount))
       .to.emit(xBTC, "Transfer")

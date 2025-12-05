@@ -5,7 +5,6 @@ export const DEPLOYMENT_CONFIG = {
   
   // Role addresses from environment variables
   ADMIN: process.env.ADMIN || "",
-  DENY_LISTER: process.env.DENY_LISTER || "",
   MINTER: process.env.MINTER || "",
   TREASURY: process.env.TREASURY || "",
 };

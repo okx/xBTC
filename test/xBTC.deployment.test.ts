@@ -15,30 +15,25 @@ describe("xBTC Deployment End-to-End", function () {
 
   const TOKEN_NAME = "Cross-Chain Bitcoin";
   const TOKEN_SYMBOL = "xBTC";
-  const MAX_SUPPLY = 21_000_000n * 10n ** 8n;
 
-  let denyLister: string;
-  
   it("Phase 1: Deploy contracts with predetermined addresses pattern", async function () {
     console.log("🚀 Starting xBTC End-to-End Deployment Test");
     
     signers = await ethers.getSigners();
     admin = await signers[0].getAddress();
-    denyLister = await signers[1].getAddress();
-    minter = await signers[2].getAddress(); 
-    treasury = await signers[3].getAddress();
-    newAdmin = await signers[4].getAddress();
+    minter = await signers[1].getAddress(); 
+    treasury = await signers[2].getAddress();
+    newAdmin = await signers[3].getAddress();
 
     console.log("📋 Test Accounts:");
     console.log(`   Admin: ${admin}`);
-    console.log(`   DenyLister: ${denyLister}`);
     console.log(`   Minter: ${minter}`);
     console.log(`   Treasury: ${treasury}`);
     console.log(`   New Admin: ${newAdmin}`);
 
     // Deploy implementation
     console.log("🏗️  Deploying xBTC Implementation...");
-    implementation = await ethers.deployContract("xBTC");
+    implementation = await ethers.deployContract("xbtc");
     await implementation.waitForDeployment();
     
     const implementationAddress = await implementation.getAddress();
@@ -47,12 +42,12 @@ describe("xBTC Deployment End-to-End", function () {
     // Prepare initialization data
     const initData = implementation.interface.encodeFunctionData(
       "initialize", 
-      [TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, treasury, MAX_SUPPLY]
+      [TOKEN_NAME, TOKEN_SYMBOL, admin, minter, treasury]
     );
 
     // Deploy proxy
     console.log("🔄 Deploying Proxy...");
-    proxy = await ethers.deployContract("contracts/Proxy.sol:Proxy", [
+    proxy = await ethers.deployContract("xbtcProxy", [
       implementationAddress,
       admin, // proxy admin
       initData
@@ -80,7 +75,7 @@ describe("xBTC Deployment End-to-End", function () {
     
     // Mint initial supply to treasury
     console.log("   Minting initial supply to treasury...");
-    await expect(xBTC.connect(signers[2]).mint(treasury, initialMint))
+    await expect(xBTC.connect(signers[1]).mint(treasury, initialMint))
       .to.emit(xBTC, "Mint")
       .withArgs(treasury, initialMint);
 
@@ -91,12 +86,12 @@ describe("xBTC Deployment End-to-End", function () {
 
     // Distribute to users
     const userAmount = ethers.parseUnits("1000", 8);
-    const user1 = await signers[5].getAddress();
-    const user2 = await signers[6].getAddress();
+    const user1 = await signers[4].getAddress();
+    const user2 = await signers[5].getAddress();
     
     console.log("   Distributing tokens to users...");
-    await xBTC.connect(signers[3]).transfer(user1, userAmount);
-    await xBTC.connect(signers[3]).transfer(user2, userAmount);
+    await xBTC.connect(signers[2]).transfer(user1, userAmount);
+    await xBTC.connect(signers[2]).transfer(user2, userAmount);
     
     expect(await xBTC.balanceOf(user1)).to.equal(userAmount);
     expect(await xBTC.balanceOf(user2)).to.equal(userAmount);
@@ -105,7 +100,7 @@ describe("xBTC Deployment End-to-End", function () {
 
     // Test inter-user transfer
     const transferAmount = ethers.parseUnits("250", 8);
-    await expect(xBTC.connect(signers[5]).transfer(user2, transferAmount))
+    await expect(xBTC.connect(signers[4]).transfer(user2, transferAmount))
       .to.emit(xBTC, "Transfer")
       .withArgs(user1, user2, transferAmount);
     
@@ -113,10 +108,10 @@ describe("xBTC Deployment End-to-End", function () {
 
     // Test burn - first mint tokens to the minter so they can burn
     const burnAmount = ethers.parseUnits("100", 8);
-    await xBTC.connect(signers[1]).setReceiver(minter);
-    await xBTC.connect(signers[2]).mint(minter, burnAmount);
+    await xBTC.connect(signers[0]).setReceiver(minter);
+    await xBTC.connect(signers[1]).mint(minter, burnAmount);
     
-    await expect(xBTC.connect(signers[2]).burn(burnAmount))
+    await expect(xBTC.connect(signers[1]).burn(burnAmount))
       .to.emit(xBTC, "Burn")
       .withArgs(minter, burnAmount);
     
@@ -127,36 +122,36 @@ describe("xBTC Deployment End-to-End", function () {
   it("Phase 3: Advanced features testing", async function () {
     console.log("🔐 Phase 3: Advanced Features");
     
-    const user1 = await signers[5].getAddress();
-    const user2 = await signers[6].getAddress();
+    const user1 = await signers[4].getAddress();
+    const user2 = await signers[5].getAddress();
     
     // Test pause functionality
     console.log("   Testing pause functionality...");
-    await xBTC.connect(signers[1]).pause();
+    await xBTC.connect(signers[0]).pause();
     expect(await xBTC.paused()).to.be.true;
     
     await expect(
-      xBTC.connect(signers[5]).transfer(user2, ethers.parseUnits("10", 8))
+      xBTC.connect(signers[4]).transfer(user2, ethers.parseUnits("10", 8))
     ).to.be.revertedWithCustomError(xBTC, "EnforcedPause");
     
-    await xBTC.connect(signers[1]).unpause();
+    await xBTC.connect(signers[0]).unpause();
     expect(await xBTC.paused()).to.be.false;
     
     console.log("   ✅ Pause functionality working");
 
     // Test address blocking
     console.log("   Testing address blocking...");
-    await expect(xBTC.connect(signers[1]).addToDenyList(user1))
+    await expect(xBTC.connect(signers[0]).addToDenyList(user1))
       .to.emit(xBTC, "AddedToDenyList")
       .withArgs(user1);
     
     expect(await xBTC.denyList(user1)).to.be.true;
     
     await expect(
-      xBTC.connect(signers[5]).transfer(user2, ethers.parseUnits("10", 8))
+      xBTC.connect(signers[4]).transfer(user2, ethers.parseUnits("10", 8))
           ).to.be.revertedWithCustomError(xBTC, "SenderInDenyList");
     
-    await xBTC.connect(signers[1]).removeFromDenyList(user1);
+    await xBTC.connect(signers[0]).removeFromDenyList(user1);
     expect(await xBTC.denyList(user1)).to.be.false;
     
     console.log("   ✅ Address blocking working");
@@ -216,7 +211,7 @@ describe("xBTC Deployment End-to-End", function () {
     
     const DENY_LISTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("DENY_LISTER_ROLE"));
     const MINTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
-    const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
+    const DEFAULT_DENY_LISTER_ROLE = ethers.ZeroHash;
     
     // Transfer admin role
     console.log("   Transferring admin role...");
@@ -224,22 +219,22 @@ describe("xBTC Deployment End-to-End", function () {
       .to.emit(xBTC, "RoleGranted")
       .withArgs(DENY_LISTER_ROLE, newAdmin, admin);
     
-    await expect(xBTC.connect(signers[0]).grantRole(DEFAULT_ADMIN_ROLE, newAdmin))
+    await expect(xBTC.connect(signers[0]).grantRole(DEFAULT_DENY_LISTER_ROLE, newAdmin))
       .to.emit(xBTC, "RoleGranted")
-      .withArgs(DEFAULT_ADMIN_ROLE, newAdmin, admin);
+      .withArgs(DEFAULT_DENY_LISTER_ROLE, newAdmin, admin);
     
     expect(await xBTC.hasRole(DENY_LISTER_ROLE, newAdmin)).to.be.true;
-    expect(await xBTC.hasRole(DEFAULT_ADMIN_ROLE, newAdmin)).to.be.true;
+    expect(await xBTC.hasRole(DEFAULT_DENY_LISTER_ROLE, newAdmin)).to.be.true;
     
     console.log(`   ✅ Admin role transferred to: ${newAdmin}`);
 
-    // Test new admin functionality (newAdmin has DENY_LISTER_ROLE now)
-    const testUser = await signers[7].getAddress();
-    await expect(xBTC.connect(signers[4]).addToDenyList(testUser))
+    // Test new admin functionality
+    const testUser = await signers[6].getAddress();
+    await expect(xBTC.connect(signers[3]).addToDenyList(testUser))
       .to.emit(xBTC, "AddedToDenyList")
       .withArgs(testUser);
     
-    await xBTC.connect(signers[4]).removeFromDenyList(testUser); // Clean up
+    await xBTC.connect(signers[3]).removeFromDenyList(testUser); // Clean up
     
     console.log("   ✅ New admin functionality verified");
 
@@ -251,8 +246,8 @@ describe("xBTC Deployment End-to-End", function () {
     
     // Test treasury minting
     const mintAmount = ethers.parseUnits("500", 8);
-    await xBTC.connect(signers[1]).setReceiver(testUser); // DenyLister sets receiver
-    await expect(xBTC.connect(signers[3]).mint(testUser, mintAmount))
+    await xBTC.connect(signers[0]).setReceiver(testUser); // Admin sets receiver (treasury has minter role now)
+    await expect(xBTC.connect(signers[2]).mint(testUser, mintAmount))
       .to.emit(xBTC, "Mint")
       .withArgs(testUser, mintAmount);
     

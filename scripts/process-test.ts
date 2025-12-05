@@ -30,7 +30,7 @@ async function deployContract(): Promise<DeploymentResult> {
 
   // Deploy the implementation contract
   console.log("\n1. Deploying xbtc implementation...");
-  const xbtcFactory = await ethers.getContractFactory("Token");
+  const xbtcFactory = await ethers.getContractFactory("xbtc");
   const implementation = await xbtcFactory.deploy();
   await implementation.waitForDeployment();
   const implementationAddress = await implementation.getAddress();
@@ -44,13 +44,12 @@ async function deployContract(): Promise<DeploymentResult> {
     deployer.address,
     minter.address,
     treasury.address, // Initial receiver
-    TOKEN_CONFIG.MAX_SUPPLY, // Max supply: 21M xBTC with 8 decimals
   ]);
   console.log("✅ Initialization data prepared");
 
   // Deploy the proxy (TransparentUpgradeableProxy will automatically create ProxyAdmin)
   console.log("\n3. Deploying xbtcProxy (ProxyAdmin will be created automatically)...");
-  const xbtcProxyFactory = await ethers.getContractFactory("contracts/Proxy.sol:Proxy");
+  const xbtcProxyFactory = await ethers.getContractFactory("xbtcProxy");
   const proxy = await xbtcProxyFactory.deploy(
     implementationAddress,
     deployer.address, // EOA admin - TransparentUpgradeableProxy will create ProxyAdmin automatically
@@ -85,7 +84,7 @@ async function testMintFunction(contractAddress: string) {
 
   const [, minter] = await ethers.getSigners();
   const [ , , recipient] = await ethers.getSigners();
-  const xbtcFactory = await ethers.getContractFactory("Token");
+  const xbtcFactory = await ethers.getContractFactory("xbtc");
   const xBTC = xbtcFactory.attach(contractAddress).connect(minter);
 
   const amount = ethers.parseUnits("1000", 8); // 1000 xBTC
@@ -109,7 +108,7 @@ async function testBurnFunction(contractAddress: string) {
 
   const [, minter] = await ethers.getSigners();
   const [, , treasury] = await ethers.getSigners();
-  const xbtcFactory = await ethers.getContractFactory("Token");
+  const xbtcFactory = await ethers.getContractFactory("xbtc");
   const xBTC = xbtcFactory.attach(contractAddress).connect(minter);
 
   const burnAmount = ethers.parseUnits("500", 8); // 500 xBTC
@@ -149,7 +148,7 @@ async function testAddToDenyList(contractAddress: string) {
   console.log("\n🚫 Testing addToDenyList functionality...");
 
   const [admin] = await ethers.getSigners();
-  const xbtcFactory = await ethers.getContractFactory("Token");
+  const xbtcFactory = await ethers.getContractFactory("xbtc");
   const xBTC = xbtcFactory.attach(contractAddress).connect(admin);
 
   const addressToBlock = "0x9999999999999999999999999999999999999999";
@@ -172,7 +171,7 @@ async function testRemoveFromDenyList(contractAddress: string) {
   console.log("\n✅ Testing removeFromDenyList functionality...");
 
   const [admin] = await ethers.getSigners();
-  const xbtcFactory = await ethers.getContractFactory("Token");
+  const xbtcFactory = await ethers.getContractFactory("xbtc");
   const xBTC = xbtcFactory.attach(contractAddress).connect(admin);
 
   const addressToUnblock = "0x9999999999999999999999999999999999999999";
@@ -195,7 +194,7 @@ async function testBatchAddToDenyList(contractAddress: string) {
   console.log("\n🚫📦 Testing batchAddToDenyList functionality...");
 
   const [admin] = await ethers.getSigners();
-  const xbtcFactory = await ethers.getContractFactory("Token");
+  const xbtcFactory = await ethers.getContractFactory("xbtc");
   const xBTC = xbtcFactory.attach(contractAddress).connect(admin);
 
   const addressesToBlock = [
@@ -226,7 +225,7 @@ async function testBatchRemoveFromDenyList(contractAddress: string) {
   console.log("\n✅📦 Testing batchRemoveFromDenyList functionality...");
 
   const [admin] = await ethers.getSigners();
-  const xbtcFactory = await ethers.getContractFactory("Token");
+  const xbtcFactory = await ethers.getContractFactory("xbtc");
   const xBTC = xbtcFactory.attach(contractAddress).connect(admin);
 
   const addressesToUnblock = [
@@ -257,7 +256,7 @@ async function testPauseFunction(contractAddress: string) {
   console.log("\n⏸️ Testing pause functionality...");
 
   const [admin] = await ethers.getSigners();
-  const xbtcFactory = await ethers.getContractFactory("Token");
+  const xbtcFactory = await ethers.getContractFactory("xbtc");
   const xBTC = xbtcFactory.attach(contractAddress).connect(admin);
 
   try {
@@ -278,7 +277,7 @@ async function testUnpauseFunction(contractAddress: string) {
   console.log("\n▶️ Testing unpause functionality...");
 
   const [admin] = await ethers.getSigners();
-  const xbtcFactory = await ethers.getContractFactory("Token");
+  const xbtcFactory = await ethers.getContractFactory("xbtc");
   const xBTC = xbtcFactory.attach(contractAddress).connect(admin);
 
   try {
@@ -299,7 +298,7 @@ async function testTransferDenyLister(contractAddress: string) {
   console.log("\n🔄 Testing transferDenyLister functionality...");
 
   const [admin] = await ethers.getSigners();
-  const xbtcFactory = await ethers.getContractFactory("Token");
+  const xbtcFactory = await ethers.getContractFactory("xbtc");
   const xBTC = xbtcFactory.attach(contractAddress).connect(admin);
 
   const newDenyLister = "0x8888888888888888888888888888888888888888";
@@ -323,7 +322,7 @@ async function testTransferMinter(contractAddress: string) {
   console.log("\n🔄 Testing transferMinter functionality...");
 
   const [, minter] = await ethers.getSigners();
-  const xbtcFactory = await ethers.getContractFactory("Token");
+  const xbtcFactory = await ethers.getContractFactory("xbtc");
   const xBTC = xbtcFactory.attach(contractAddress).connect(minter);
 
   const newMinter = "0x7777777777777777777777777777777777777777";

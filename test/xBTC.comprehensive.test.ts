@@ -16,28 +16,25 @@ describe("xBTC Comprehensive Tests", function () {
   const TOKEN_SYMBOL = "xBTC";
   const MAX_SUPPLY = 21_000_000n * 10n ** 8n; // 21 million xBTC
 
-  let denyLister: string;
-  
   beforeEach(async function () {
     signers = await ethers.getSigners();
     admin = await signers[0].getAddress();
-    denyLister = await signers[1].getAddress();
-    minter = await signers[2].getAddress();
-    user1 = await signers[3].getAddress();
-    user2 = await signers[4].getAddress();
+    minter = await signers[1].getAddress();
+    user1 = await signers[2].getAddress();
+    user2 = await signers[3].getAddress();
 
     // Deploy implementation
-    implementation = await ethers.deployContract("Token");
+    implementation = await ethers.deployContract("xbtc");
     await implementation.waitForDeployment();
 
     // Prepare initialization data
     const initData = implementation.interface.encodeFunctionData(
       "initialize", 
-      [TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, user1, MAX_SUPPLY]
+      [TOKEN_NAME, TOKEN_SYMBOL, admin, minter, user1]
     );
 
     // Deploy proxy
-    proxy = await ethers.deployContract("contracts/Proxy.sol:Proxy", [
+    proxy = await ethers.deployContract("xbtcProxy", [
       await implementation.getAddress(),
       admin,
       initData
@@ -51,7 +48,7 @@ describe("xBTC Comprehensive Tests", function () {
   describe("Initialization Edge Cases", function () {
     it("Should not allow re-initialization", async function () {
       await expect(
-        xBTC.initialize(TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, user1, MAX_SUPPLY)
+        xBTC.initialize(TOKEN_NAME, TOKEN_SYMBOL, admin, minter, user1)
       ).to.be.revertedWithCustomError(xBTC, "InvalidInitialization");
     });
 
@@ -63,25 +60,25 @@ describe("xBTC Comprehensive Tests", function () {
   describe("Minting Edge Cases", function () {
     it("Should not allow setting receiver to zero address", async function () {
       await expect(
-        xBTC.connect(signers[1]).setReceiver(ethers.ZeroAddress)
+        xBTC.connect(signers[0]).setReceiver(ethers.ZeroAddress)
       ).to.be.revertedWithCustomError(xBTC, "ZeroAddress");
     });
 
     it("Should not allow minting zero amount", async function () {
       await expect(
-        xBTC.connect(signers[2]).mint(user1, 0)
+        xBTC.connect(signers[1]).mint(user1, 0)
       ).to.be.revertedWithCustomError(xBTC, "ZeroAmount");
     });
 
     it("Should not allow exceeding max supply", async function () {
       const exceedAmount = MAX_SUPPLY + 1n;
       await expect(
-        xBTC.connect(signers[2]).mint(user1, exceedAmount)
+        xBTC.connect(signers[1]).mint(user1, exceedAmount)
       ).to.be.revertedWithCustomError(xBTC, "ExceedsMaxSupply");
     });
 
     it("Should allow minting exactly max supply", async function () {
-      await expect(xBTC.connect(signers[2]).mint(user1, MAX_SUPPLY))
+      await expect(xBTC.connect(signers[1]).mint(user1, MAX_SUPPLY))
         .to.emit(xBTC, "Mint")
         .withArgs(user1, MAX_SUPPLY);
 
@@ -90,7 +87,7 @@ describe("xBTC Comprehensive Tests", function () {
 
     it("Should not allow non-minter to mint", async function () {
       await expect(
-        xBTC.connect(signers[3]).mint(user1, ethers.parseUnits("100", 8))
+        xBTC.connect(signers[2]).mint(user1, ethers.parseUnits("100", 8))
       ).to.be.revertedWithCustomError(xBTC, "AccessControlUnauthorizedAccount");
     });
   });
@@ -98,21 +95,21 @@ describe("xBTC Comprehensive Tests", function () {
   describe("Burning Edge Cases", function () {
     beforeEach(async function () {
       // Mint some tokens first
-      await xBTC.connect(signers[2]).mint(user1, ethers.parseUnits("1000", 8));
+      await xBTC.connect(signers[1]).mint(user1, ethers.parseUnits("1000", 8));
     });
 
     // Note: Cannot test burning from zero address since msg.sender cannot be zero address
 
     it("Should not allow burning zero amount", async function () {
       await expect(
-        xBTC.connect(signers[2]).burn(0)
+        xBTC.connect(signers[1]).burn(0)
       ).to.be.revertedWithCustomError(xBTC, "ZeroAmount");
     });
 
     it("Should not allow burning more than balance", async function () {
       const balance = await xBTC.balanceOf(minter);
       await expect(
-        xBTC.connect(signers[2]).burn(balance + 1n)
+        xBTC.connect(signers[1]).burn(balance + 1n)
       ).to.be.revertedWithCustomError(xBTC, "InsufficientBalance");
     });
 
@@ -120,11 +117,11 @@ describe("xBTC Comprehensive Tests", function () {
       const burnAmount = ethers.parseUnits("100", 8);
       
       // First mint tokens to the minter
-      await xBTC.connect(signers[1]).setReceiver(minter);
-      await xBTC.connect(signers[2]).mint(minter, burnAmount);
+      await xBTC.connect(signers[0]).setReceiver(minter);
+      await xBTC.connect(signers[1]).mint(minter, burnAmount);
       const initialBalance = await xBTC.balanceOf(minter);
       
-      await expect(xBTC.connect(signers[2]).burn(burnAmount))
+      await expect(xBTC.connect(signers[1]).burn(burnAmount))
         .to.emit(xBTC, "Transfer")
         .withArgs(minter, ethers.ZeroAddress, burnAmount)
         .and.to.emit(xBTC, "Burn")
@@ -137,13 +134,13 @@ describe("xBTC Comprehensive Tests", function () {
   describe("Address Blocking Edge Cases", function () {
     it("Should not allow adding zero address to deny list", async function () {
       await expect(
-        xBTC.connect(signers[1]).addToDenyList(ethers.ZeroAddress)
+        xBTC.connect(signers[0]).addToDenyList(ethers.ZeroAddress)
       ).to.be.revertedWithCustomError(xBTC, "ZeroAddress");
     });
 
     it("Should allow adding admin to deny list", async function () {
       await expect(
-        xBTC.connect(signers[1]).addToDenyList(admin)
+        xBTC.connect(signers[0]).addToDenyList(admin)
       ).to.emit(xBTC, "AddedToDenyList").withArgs(admin);
       
       expect(await xBTC.denyList(admin)).to.be.true;
@@ -151,22 +148,22 @@ describe("xBTC Comprehensive Tests", function () {
 
     it("Should allow adding minter to deny list", async function () {
       await expect(
-        xBTC.connect(signers[1]).addToDenyList(minter)
+        xBTC.connect(signers[0]).addToDenyList(minter)
       ).to.emit(xBTC, "AddedToDenyList").withArgs(minter);
       
       expect(await xBTC.denyList(minter)).to.be.true;
     });
 
-    it("Should not allow non-denyLister to add to deny list", async function () {
+    it("Should not allow non-admin to add to deny list", async function () {
       await expect(
-        xBTC.connect(signers[2]).addToDenyList(user1)
+        xBTC.connect(signers[1]).addToDenyList(user1)
       ).to.be.revertedWithCustomError(xBTC, "AccessControlUnauthorizedAccount");
     });
 
     it("Should not allow minting to address in deny list", async function () {
-      await xBTC.connect(signers[1]).addToDenyList(user1);
+      await xBTC.connect(signers[0]).addToDenyList(user1);
       await expect(
-        xBTC.connect(signers[2]).mint(user1, ethers.parseUnits("100", 8))
+        xBTC.connect(signers[1]).mint(user1, ethers.parseUnits("100", 8))
       ).to.be.revertedWithCustomError(xBTC, "RecipientInDenyList");
     });
 
@@ -458,21 +455,21 @@ describe("xBTC Comprehensive Tests", function () {
 
   describe("ERC20 Standard Functions", function () {
     beforeEach(async function () {
-      await xBTC.connect(signers[2]).mint(user1, ethers.parseUnits("1000", 8));
+      await xBTC.connect(signers[1]).mint(user1, ethers.parseUnits("1000", 8));
     });
 
     it("Should handle approve and transferFrom", async function () {
       const amount = ethers.parseUnits("100", 8);
       
       // Approve
-      await expect(xBTC.connect(signers[3]).approve(user2, amount))
+      await expect(xBTC.connect(signers[2]).approve(user2, amount))
         .to.emit(xBTC, "Approval")
         .withArgs(user1, user2, amount);
 
       expect(await xBTC.allowance(user1, user2)).to.equal(amount);
 
       // TransferFrom
-      await expect(xBTC.connect(signers[4]).transferFrom(user1, user2, amount))
+      await expect(xBTC.connect(signers[3]).transferFrom(user1, user2, amount))
         .to.emit(xBTC, "Transfer")
         .withArgs(user1, user2, amount);
     });
@@ -508,7 +505,7 @@ describe("xBTC Comprehensive Tests", function () {
         deadline,
       };
 
-      const signature = await signers[3].signTypedData(domain, types, message);
+      const signature = await signers[2].signTypedData(domain, types, message);
       const { v, r, s } = ethers.Signature.from(signature);
 
       await expect(

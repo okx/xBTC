@@ -26,7 +26,7 @@ async function main() {
   console.log("Using xBTC contract at:", PROXY_ADDRESS);
 
   // Connect to the deployed xBTC contract
-  const xbtcFactory = await ethers.getContractFactory("Token");
+  const xbtcFactory = await ethers.getContractFactory("xbtc");
   const xBTC = xbtcFactory.attach(PROXY_ADDRESS);
 
   // Verify contract connection

@@ -17,11 +17,11 @@ async function main() {
 
   // Prepare contract factories and calculate init codes
   console.log("\nPreparing contract factories and init codes...");
-  const xbtcFactory = await ethers.getContractFactory("Token");
-  const xbtcProxyFactory = await ethers.getContractFactory("contracts/Proxy.sol:Proxy");
+  const xbtcFactory = await ethers.getContractFactory("xbtc");
+  const xbtcProxyFactory = await ethers.getContractFactory("xbtcProxy");
   
-  console.log("Token init_code:", xbtcFactory.bytecode);
-  console.log("Token init_code_hash:", ethers.keccak256(xbtcFactory.bytecode));
+  console.log("xbtc init_code:", xbtcFactory.bytecode);
+  console.log("xbtc init_code_hash:", ethers.keccak256(xbtcFactory.bytecode));
 
   const deployedAddress_impl = ethers.getCreate2Address(
     SAFE_CREATE2_FACTORY,
@@ -35,10 +35,8 @@ async function main() {
     TOKEN_CONFIG.NAME,
     TOKEN_CONFIG.SYMBOL,
     DEPLOYMENT_CONFIG.ADMIN,
-    DEPLOYMENT_CONFIG.DENY_LISTER,
     DEPLOYMENT_CONFIG.MINTER,
     DEPLOYMENT_CONFIG.TREASURY, // Initial receiver
-    TOKEN_CONFIG.MAX_SUPPLY, // Max supply: 21M xBTC with 8 decimals
   ]);
 
   console.log("init data", initData);
@@ -99,7 +97,6 @@ async function main() {
   console.log("Implementation Address:", deployedAddress_impl);
   console.log("Proxy Address:", deployedAddress_proxy);
   console.log("Admin Address:", DEPLOYMENT_CONFIG.ADMIN);
-  console.log("DenyLister Address:", DEPLOYMENT_CONFIG.DENY_LISTER);
   console.log("Minter Address:", DEPLOYMENT_CONFIG.MINTER);
   console.log("Treasury Address:", DEPLOYMENT_CONFIG.TREASURY);
   console.log("====================================");
