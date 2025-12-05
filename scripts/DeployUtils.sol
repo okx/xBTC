@@ -2,10 +2,10 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Script.sol";
-import "../contracts/Proxy.sol";
-import "../contracts/Token.sol";
-import "../contracts/StakedTokenV1.sol";
-import "../contracts/ExchangeRateUpdater.sol";
+import {Proxy} from "../contracts/Proxy.sol";
+import {xToken} from "../contracts/xToken.sol";
+import {StakedTokenV1} from "../contracts/StakedTokenV1.sol";
+import {ExchangeRateUpdater} from "../contracts/ExchangeRateUpdater.sol";
 
 /**
  * @title ISingletonFactory
@@ -86,7 +86,7 @@ abstract contract DeployUtils is Script {
         uint256 maxSupply
     ) internal pure returns (bytes memory) {
         return abi.encodeWithSelector(
-            Token.initialize.selector,
+            xToken.initialize.selector,
             name,
             symbol,
             admin,
@@ -181,7 +181,7 @@ abstract contract DeployUtils is Script {
         address expectedReceiver,
         uint256 expectedMaxSupply
     ) internal view {
-        Token token = Token(proxy);
+        xToken token = xToken(proxy);
 
         console.log("");
         console.log("=== Verification ===");

@@ -24,13 +24,13 @@
 
 pragma solidity 0.8.24;
 
-import {Token} from "./Token.sol";
+import {xToken} from "./xToken.sol";
 
 /**
  * @title StakedTokenV1
  * @notice ERC20 token backed by staked cryptocurrency reserves, version 1
  */
-contract StakedTokenV1 is Token {
+contract StakedTokenV1 is xToken {
     /**
      * @dev Storage slot with the address of the current oracle.
      * This is the keccak-256 hash of "org.coinbase.stakedToken.exchangeRateOracle"

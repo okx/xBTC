@@ -4,7 +4,7 @@ pragma solidity 0.8.24;
 import {Test, console} from "forge-std/Test.sol";
 import {ExchangeRateUpdater} from "../contracts/ExchangeRateUpdater.sol";
 import {StakedTokenV1} from "../contracts/StakedTokenV1.sol";
-import {Token} from "../contracts/Token.sol";
+import {xToken} from "../contracts/xToken.sol";
 import {Proxy} from "../contracts/Proxy.sol";
 
 /**
@@ -54,9 +54,9 @@ contract ExchangeRateUpdaterTest is Test {
         // Deploy StakedTokenV1 implementation
         StakedTokenV1 implementation = new StakedTokenV1();
 
-        // Prepare initialization data (initialize is inherited from Token)
+        // Prepare initialization data (initialize is inherited from xToken)
         bytes memory initData = abi.encodeWithSelector(
-            Token.initialize.selector,
+            xToken.initialize.selector,
             "OKX Staked ETH",
             "xBETH",
             admin, // denyLister / DEFAULT_ADMIN_ROLE

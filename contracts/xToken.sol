@@ -8,8 +8,8 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
- * @title Token
- * @dev An upgradeable ERC-20 token contract
+ * @title xToken
+ * @dev An upgradeable ERC-20 token contract for OKX x-Assets
  * Features:
  * - ERC-20 standard token functionality
  * - ERC-2612 gasless approvals (permit)
@@ -17,7 +17,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  * - Pausable transfers
  * - Deny list functionality for compliance
  */
-contract Token is
+contract xToken is
 Initializable,
 ERC20Upgradeable,
 ERC20PausableUpgradeable,

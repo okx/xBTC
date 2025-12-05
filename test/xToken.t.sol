@@ -2,15 +2,15 @@
 pragma solidity 0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
-import {Token} from "../contracts/Token.sol";
+import {xToken} from "../contracts/xToken.sol";
 import {Proxy} from "../contracts/Proxy.sol";
 
 /**
- * @title TokenTest
- * @notice Comprehensive tests for Token.sol and all derived token contracts
+ * @title xTokenTest
+ * @notice Comprehensive tests for xToken.sol and all derived token contracts
  */
-contract TokenTest is Test {
-    Token public token;
+contract xTokenTest is Test {
+    xToken public token;
     Proxy public proxy;
 
     address public admin; // Same address for proxy admin owner and DEFAULT_ADMIN_ROLE
@@ -46,13 +46,13 @@ contract TokenTest is Test {
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
 
-        // Deploy Token implementation
-        Token implementation = new Token();
+        // Deploy xToken implementation
+        xToken implementation = new xToken();
 
         // Prepare initialization data
         bytes memory initData = abi.encodeWithSelector(
-            Token.initialize.selector,
-            "Test Token",
+            xToken.initialize.selector,
+            "Test xToken",
             "TEST",
             admin,
             denyLister,
@@ -66,13 +66,13 @@ contract TokenTest is Test {
         // and admin becomes its OWNER. Calls from admin go through normally because
         // admin address != ProxyAdmin contract address.
         proxy = new Proxy(address(implementation), admin, initData);
-        token = Token(address(proxy));
+        token = xToken(address(proxy));
     }
 
     // ============ Initialize Tests ============
 
     function test_Initialize_Success() public view {
-        assertEq(token.name(), "Test Token");
+        assertEq(token.name(), "Test xToken");
         assertEq(token.symbol(), "TEST");
         assertEq(token.MAX_SUPPLY(), MAX_SUPPLY);
         assertEq(token.authorizedReceiver(), receiver);
@@ -82,10 +82,10 @@ contract TokenTest is Test {
     }
 
     function test_Initialize_RevertWhen_ZeroAddressReceiver() public {
-        Token implementation = new Token();
+        xToken implementation = new xToken();
         bytes memory initData = abi.encodeWithSelector(
-            Token.initialize.selector,
-            "Test Token",
+            xToken.initialize.selector,
+            "Test xToken",
             "TEST",
             admin,
             denyLister,
@@ -94,15 +94,15 @@ contract TokenTest is Test {
             MAX_SUPPLY
         );
 
-        vm.expectRevert(Token.ZeroAddress.selector);
+        vm.expectRevert(xToken.ZeroAddress.selector);
         new Proxy(address(implementation), admin, initData);
     }
 
     function test_Initialize_RevertWhen_ZeroMaxSupply() public {
-        Token implementation = new Token();
+        xToken implementation = new xToken();
         bytes memory initData = abi.encodeWithSelector(
-            Token.initialize.selector,
-            "Test Token",
+            xToken.initialize.selector,
+            "Test xToken",
             "TEST",
             admin,
             denyLister,
@@ -111,7 +111,7 @@ contract TokenTest is Test {
             0 // zero max supply
         );
 
-        vm.expectRevert(Token.ZeroAmount.selector);
+        vm.expectRevert(xToken.ZeroAmount.selector);
         new Proxy(address(implementation), admin, initData);
     }
 
@@ -131,7 +131,7 @@ contract TokenTest is Test {
 
     function test_SetReceiver_RevertWhen_ZeroAddress() public {
         vm.prank(denyLister);
-        vm.expectRevert(Token.ZeroAddress.selector);
+        vm.expectRevert(xToken.ZeroAddress.selector);
         token.setReceiver(address(0));
     }
 
@@ -158,13 +158,13 @@ contract TokenTest is Test {
 
     function test_Mint_RevertWhen_ZeroAmount() public {
         vm.prank(minter);
-        vm.expectRevert(Token.ZeroAmount.selector);
+        vm.expectRevert(xToken.ZeroAmount.selector);
         token.mint(receiver, 0);
     }
 
     function test_Mint_RevertWhen_WrongReceiver() public {
         vm.prank(minter);
-        vm.expectRevert(Token.NoAuthorizedReceiver.selector);
+        vm.expectRevert(xToken.NoAuthorizedReceiver.selector);
         token.mint(user1, 1000);
     }
 
@@ -172,7 +172,7 @@ contract TokenTest is Test {
         vm.prank(minter);
         vm.expectRevert(
             abi.encodeWithSelector(
-                Token.ExceedsMaxSupply.selector, MAX_SUPPLY + 1, MAX_SUPPLY
+                xToken.ExceedsMaxSupply.selector, MAX_SUPPLY + 1, MAX_SUPPLY
             )
         );
         token.mint(receiver, MAX_SUPPLY + 1);
@@ -218,14 +218,14 @@ contract TokenTest is Test {
 
     function test_Burn_RevertWhen_ZeroAmount() public {
         vm.prank(minter);
-        vm.expectRevert(Token.ZeroAmount.selector);
+        vm.expectRevert(xToken.ZeroAmount.selector);
         token.burn(0);
     }
 
     function test_Burn_RevertWhen_InsufficientBalance() public {
         vm.prank(minter);
         vm.expectRevert(
-            abi.encodeWithSelector(Token.InsufficientBalance.selector, 0, 1000)
+            abi.encodeWithSelector(xToken.InsufficientBalance.selector, 0, 1000)
         );
         token.burn(1000);
     }
@@ -299,7 +299,7 @@ contract TokenTest is Test {
 
     function test_AddToDenyList_RevertWhen_ZeroAddress() public {
         vm.prank(denyLister);
-        vm.expectRevert(Token.ZeroAddress.selector);
+        vm.expectRevert(xToken.ZeroAddress.selector);
         token.addToDenyList(address(0));
     }
 
@@ -365,7 +365,7 @@ contract TokenTest is Test {
         address[] memory accounts = new address[](0);
 
         vm.prank(denyLister);
-        vm.expectRevert(Token.EmptyArray.selector);
+        vm.expectRevert(xToken.EmptyArray.selector);
         token.batchAddToDenyList(accounts);
     }
 
@@ -375,7 +375,7 @@ contract TokenTest is Test {
         accounts[1] = address(0);
 
         vm.prank(denyLister);
-        vm.expectRevert(Token.ZeroAddress.selector);
+        vm.expectRevert(xToken.ZeroAddress.selector);
         token.batchAddToDenyList(accounts);
     }
 
@@ -426,7 +426,7 @@ contract TokenTest is Test {
         address[] memory accounts = new address[](0);
 
         vm.prank(denyLister);
-        vm.expectRevert(Token.EmptyArray.selector);
+        vm.expectRevert(xToken.EmptyArray.selector);
         token.batchRemoveFromDenyList(accounts);
     }
 
@@ -663,13 +663,13 @@ contract TokenTest is Test {
 
     function test_TransferMinter_RevertWhen_ZeroAddress() public {
         vm.prank(minter);
-        vm.expectRevert(Token.ZeroAddress.selector);
+        vm.expectRevert(xToken.ZeroAddress.selector);
         token.transferMinter(address(0));
     }
 
     function test_TransferMinter_RevertWhen_SameAddress() public {
         vm.prank(minter);
-        vm.expectRevert(Token.SameValue.selector);
+        vm.expectRevert(xToken.SameValue.selector);
         token.transferMinter(minter);
     }
 
@@ -694,13 +694,13 @@ contract TokenTest is Test {
 
     function test_TransferDenyLister_RevertWhen_ZeroAddress() public {
         vm.prank(denyLister);
-        vm.expectRevert(Token.ZeroAddress.selector);
+        vm.expectRevert(xToken.ZeroAddress.selector);
         token.transferDenyLister(address(0));
     }
 
     function test_TransferDenyLister_RevertWhen_SameAddress() public {
         vm.prank(denyLister);
-        vm.expectRevert(Token.SameValue.selector);
+        vm.expectRevert(xToken.SameValue.selector);
         token.transferDenyLister(denyLister);
     }
 
@@ -724,7 +724,7 @@ contract TokenTest is Test {
         // Try to transfer from denied address
         vm.prank(receiver);
         vm.expectRevert(
-            abi.encodeWithSelector(Token.SenderInDenyList.selector, receiver)
+            abi.encodeWithSelector(xToken.SenderInDenyList.selector, receiver)
         );
         token.transfer(user1, 100);
     }
@@ -741,7 +741,7 @@ contract TokenTest is Test {
         // Try to transfer to denied address
         vm.prank(receiver);
         vm.expectRevert(
-            abi.encodeWithSelector(Token.RecipientInDenyList.selector, user1)
+            abi.encodeWithSelector(xToken.RecipientInDenyList.selector, user1)
         );
         token.transfer(user1, 100);
     }
@@ -762,7 +762,7 @@ contract TokenTest is Test {
         // Try to transfer from denied address
         vm.prank(user1);
         vm.expectRevert(
-            abi.encodeWithSelector(Token.SenderInDenyList.selector, receiver)
+            abi.encodeWithSelector(xToken.SenderInDenyList.selector, receiver)
         );
         token.transferFrom(receiver, user1, 100);
     }
@@ -783,7 +783,7 @@ contract TokenTest is Test {
         // Try to transfer to denied address
         vm.prank(user1);
         vm.expectRevert(
-            abi.encodeWithSelector(Token.RecipientInDenyList.selector, user2)
+            abi.encodeWithSelector(xToken.RecipientInDenyList.selector, user2)
         );
         token.transferFrom(receiver, user2, 100);
     }
@@ -842,7 +842,7 @@ contract TokenTest is Test {
  * @notice Tests for ERC20 standard functionality
  */
 contract TokenERC20Test is Test {
-    Token public token;
+    xToken public token;
     Proxy public proxy;
 
     address public admin;
@@ -863,10 +863,10 @@ contract TokenERC20Test is Test {
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
 
-        Token implementation = new Token();
+        xToken implementation = new xToken();
         bytes memory initData = abi.encodeWithSelector(
-            Token.initialize.selector,
-            "Test Token",
+            xToken.initialize.selector,
+            "Test xToken",
             "TEST",
             admin,
             denyLister,
@@ -875,7 +875,7 @@ contract TokenERC20Test is Test {
             MAX_SUPPLY
         );
         proxy = new Proxy(address(implementation), admin, initData);
-        token = Token(address(proxy));
+        token = xToken(address(proxy));
     }
 
     function test_Transfer_Success() public {

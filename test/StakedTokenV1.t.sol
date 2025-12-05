@@ -3,7 +3,7 @@ pragma solidity 0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
 import {StakedTokenV1} from "../contracts/StakedTokenV1.sol";
-import {Token} from "../contracts/Token.sol";
+import {xToken} from "../contracts/xToken.sol";
 import {Proxy} from "../contracts/Proxy.sol";
 
 /**
@@ -36,7 +36,7 @@ contract StakedTokenV1Test is Test {
 
         // Prepare initialization data
         bytes memory initData = abi.encodeWithSelector(
-            Token.initialize.selector,
+            xToken.initialize.selector,
             "Staked Token",
             "STK",
             admin,
@@ -122,7 +122,7 @@ contract StakedTokenV1Test is Test {
         // Create fresh instance without setting rate
         StakedTokenV1 implementation = new StakedTokenV1();
         bytes memory initData = abi.encodeWithSelector(
-            Token.initialize.selector,
+            xToken.initialize.selector,
             "Staked Token",
             "STK",
             admin,

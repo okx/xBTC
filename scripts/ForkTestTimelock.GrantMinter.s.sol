@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "../contracts/Token.sol";
+import {xToken} from "../contracts/xToken.sol";
 
 /**
  * @title ForkTestTimelock
@@ -48,7 +48,7 @@ contract ForkTestTimelockGrantMinterRole is Script {
 
     // Contract instances
     TimelockController public timelock;
-    Token public xbtcProxy;
+    xToken public xbtcProxy;
 
     // Operation tracking
     bytes32 public operationId;
@@ -61,7 +61,7 @@ contract ForkTestTimelockGrantMinterRole is Script {
 
         // Initialize contract instances
         timelock = TimelockController(payable(timelockAddress));
-        xbtcProxy = Token(xbtcProxyAddress);
+        xbtcProxy = xToken(xbtcProxyAddress);
 
         proposer = vm.envAddress("PRIVILEGED_ADDRESS");
         executor = proposer;
