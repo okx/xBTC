@@ -33,17 +33,17 @@ import {xToken} from "./xToken.sol";
 contract StakedTokenV1 is xToken {
     /**
      * @dev Storage slot with the address of the current oracle.
-     * This is the keccak-256 hash of "org.coinbase.stakedToken.exchangeRateOracle"
+     * This is the keccak-256 hash of "org.okx.stakedToken.exchangeRateOracle"
      */
     bytes32 private constant _EXCHANGE_RATE_ORACLE_POSITION = keccak256(
-        "org.coinbase.stakedToken.exchangeRateOracle"
+        "org.okx.stakedToken.exchangeRateOracle"
     );
     /**
      * @dev Storage slot with the current exchange rate.
-     * This is the keccak-256 hash of "org.coinbase.stakedToken.exchangeRate"
+     * This is the keccak-256 hash of "org.okx.stakedToken.exchangeRate"
      */
     bytes32 private constant _EXCHANGE_RATE_POSITION = keccak256(
-        "org.coinbase.stakedToken.exchangeRate"
+        "org.okx.stakedToken.exchangeRate"
     );
 
     /**
