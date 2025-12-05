@@ -281,7 +281,7 @@ contract ForkTestTimelockTransferOwner is Script {
 
         // Prepare the call to grant role
         bytes memory grantRoleCalldata =
-            abi.encodeWithSelector(IAccessControl.grantRole.selector, DEFAULT_ADMIN_ROLE, currentAdmin);
+            abi.encodeCall(IAccessControl.grantRole, (DEFAULT_ADMIN_ROLE, currentAdmin));
 
         bytes32 grantOperationId = timelock.hashOperation(xbtcProxyAddress, 0, grantRoleCalldata, PREDECESSOR, SALT);
 
@@ -411,7 +411,7 @@ contract ForkTestTimelockTransferOwner is Script {
         console.log("\n--- Step 2: Prepare transfer ownership operation ---");
 
         // Prepare the call to transfer ownership
-        bytes memory transferOwnershipCalldata = abi.encodeWithSelector(Ownable.transferOwnership.selector, currentAdmin);
+        bytes memory transferOwnershipCalldata = abi.encodeCall(Ownable.transferOwnership, (currentAdmin));
 
         bytes32 operationId = timelock.hashOperation(proxyAdminAddress, 0, transferOwnershipCalldata, PREDECESSOR, SALT);
 

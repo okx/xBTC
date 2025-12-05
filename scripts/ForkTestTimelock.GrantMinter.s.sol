@@ -167,7 +167,7 @@ contract ForkTestTimelockGrantMinterRole is Script {
 
         // Prepare the inner call: grantRole(MINTER_ROLE, newMinter)
         bytes memory grantRoleCalldata =
-            abi.encodeWithSelector(IAccessControl.grantRole.selector, MINTER_ROLE, newMinter);
+            abi.encodeCall(IAccessControl.grantRole, (MINTER_ROLE, newMinter));
 
         console.log("Inner calldata (grantRole):");
         console.logBytes(grantRoleCalldata);

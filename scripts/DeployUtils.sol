@@ -85,15 +85,10 @@ abstract contract DeployUtils is Script {
         address receiver,
         uint256 maxSupply
     ) internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(
-            xToken.initialize.selector,
-            name,
-            symbol,
-            admin,
-            denyLister,
-            minter,
-            receiver,
-            maxSupply
+        // Use abi.encodeCall for compile-time type checking
+        return abi.encodeCall(
+            xToken.initialize,
+            (name, symbol, admin, denyLister, minter, receiver, maxSupply)
         );
     }
 

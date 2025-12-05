@@ -93,16 +93,18 @@ contract xTokenTimelockTest is Test {
         // Deploy implementation
         implementation = new xToken();
 
-        // Prepare initialization data
-        bytes memory initData = abi.encodeWithSelector(
-            xToken.initialize.selector,
-            "Cross-Chain Bitcoin",
-            "xBTC",
-            address(timelock), // admin (timelock has DEFAULT_ADMIN_ROLE)
-            address(timelock), // denyLister (timelock has DENY_LISTER_ROLE)
-            minter,
-            receiver,
-            MAX_SUPPLY
+        // Prepare initialization data using abi.encodeCall for compile-time type checking
+        bytes memory initData = abi.encodeCall(
+            xToken.initialize,
+            (
+                "Cross-Chain Bitcoin",
+                "xBTC",
+                address(timelock), // admin (timelock has DEFAULT_ADMIN_ROLE)
+                address(timelock), // denyLister (timelock has DENY_LISTER_ROLE)
+                minter,
+                receiver,
+                MAX_SUPPLY
+            )
         );
 
         // Deploy proxy with timelock as initialOwner
@@ -315,9 +317,8 @@ contract xTokenTimelockTest is Test {
         console.log("Granting MINTER_ROLE to:", newMinter);
 
         // Prepare grant role call data
-        bytes memory grantRoleCallData = abi.encodeWithSelector(
-            IAccessControl.grantRole.selector, MINTER_ROLE, newMinter
-        );
+        bytes memory grantRoleCallData =
+            abi.encodeCall(IAccessControl.grantRole, (MINTER_ROLE, newMinter));
 
         // Schedule the role grant
         vm.prank(proposer);
@@ -364,9 +365,8 @@ contract xTokenTimelockTest is Test {
         assertTrue(xbtcToken.hasRole(MINTER_ROLE, minter));
 
         // Prepare revoke role call data
-        bytes memory revokeRoleCallData = abi.encodeWithSelector(
-            IAccessControl.revokeRole.selector, MINTER_ROLE, minter
-        );
+        bytes memory revokeRoleCallData =
+            abi.encodeCall(IAccessControl.revokeRole, (MINTER_ROLE, minter));
 
         // Schedule the role revocation
         vm.prank(proposer);
@@ -423,8 +423,7 @@ contract xTokenTimelockTest is Test {
         require(xbtcToken.transfer(user1, 100 * 10 ** 8), "Transfer failed");
 
         // Prepare pause call data
-        bytes memory pauseCallData =
-            abi.encodeWithSelector(xToken.pause.selector);
+        bytes memory pauseCallData = abi.encodeCall(xToken.pause, ());
 
         // Schedule pause
         vm.prank(proposer);
@@ -469,8 +468,7 @@ contract xTokenTimelockTest is Test {
         console.log("\n=== Test: Unpause Contract Through Timelock ===");
 
         // First pause the contract (directly as timelock for speed)
-        bytes memory pauseCallData =
-            abi.encodeWithSelector(xToken.pause.selector);
+        bytes memory pauseCallData = abi.encodeCall(xToken.pause, ());
         vm.prank(proposer);
         timelock.schedule(
             address(xbtcToken),
@@ -494,8 +492,7 @@ contract xTokenTimelockTest is Test {
         console.log("Contract paused");
 
         // Prepare unpause call data
-        bytes memory unpauseCallData =
-            abi.encodeWithSelector(xToken.unpause.selector);
+        bytes memory unpauseCallData = abi.encodeCall(xToken.unpause, ());
 
         // Schedule unpause
         vm.prank(proposer);
@@ -547,7 +544,7 @@ contract xTokenTimelockTest is Test {
 
         // Prepare add to deny list call data
         bytes memory addToDenyListCallData =
-            abi.encodeWithSelector(xToken.addToDenyList.selector, user1);
+            abi.encodeCall(xToken.addToDenyList, (user1));
 
         // Schedule operation
         vm.prank(proposer);
@@ -611,12 +608,10 @@ contract xTokenTimelockTest is Test {
         targets[1] = address(xbtcToken);
         values[0] = 0;
         values[1] = 0;
-        calldatas[0] = abi.encodeWithSelector(
-            IAccessControl.grantRole.selector, MINTER_ROLE, newMinter1
-        );
-        calldatas[1] = abi.encodeWithSelector(
-            IAccessControl.grantRole.selector, MINTER_ROLE, newMinter2
-        );
+        calldatas[0] =
+            abi.encodeCall(IAccessControl.grantRole, (MINTER_ROLE, newMinter1));
+        calldatas[1] =
+            abi.encodeCall(IAccessControl.grantRole, (MINTER_ROLE, newMinter2));
 
         // Schedule batch
         vm.prank(proposer);
@@ -730,8 +725,8 @@ contract xTokenTimelockTest is Test {
         assertFalse(timelock.hasRole(PROPOSER_ROLE, newProposer));
 
         // Prepare grant role call data (timelock grants role to itself)
-        bytes memory grantRoleCallData = abi.encodeWithSelector(
-            IAccessControl.grantRole.selector, PROPOSER_ROLE, newProposer
+        bytes memory grantRoleCallData = abi.encodeCall(
+            IAccessControl.grantRole, (PROPOSER_ROLE, newProposer)
         );
 
         // Schedule the role grant through timelock
@@ -806,8 +801,8 @@ contract xTokenTimelockTest is Test {
         assertFalse(timelock.hasRole(EXECUTOR_ROLE, newExecutor));
 
         // Prepare grant role call data
-        bytes memory grantRoleCallData = abi.encodeWithSelector(
-            IAccessControl.grantRole.selector, EXECUTOR_ROLE, newExecutor
+        bytes memory grantRoleCallData = abi.encodeCall(
+            IAccessControl.grantRole, (EXECUTOR_ROLE, newExecutor)
         );
 
         // Schedule the role grant
@@ -886,9 +881,8 @@ contract xTokenTimelockTest is Test {
         assertTrue(timelock.hasRole(PROPOSER_ROLE, proposer));
 
         // Prepare revoke role call data
-        bytes memory revokeRoleCallData = abi.encodeWithSelector(
-            IAccessControl.revokeRole.selector, PROPOSER_ROLE, proposer
-        );
+        bytes memory revokeRoleCallData =
+            abi.encodeCall(IAccessControl.revokeRole, (PROPOSER_ROLE, proposer));
 
         // Schedule the role revocation
         vm.prank(proposer);
@@ -923,7 +917,7 @@ contract xTokenTimelockTest is Test {
         timelock.schedule(
             address(xbtcToken),
             0,
-            abi.encodeWithSelector(xToken.pause.selector),
+            abi.encodeCall(xToken.pause, ()),
             bytes32(0),
             bytes32(uint256(205)),
             MIN_DELAY
@@ -947,7 +941,7 @@ contract xTokenTimelockTest is Test {
 
         // Prepare update delay call data
         bytes memory updateDelayCallData =
-            abi.encodeWithSelector(timelock.updateDelay.selector, newDelay);
+            abi.encodeCall(TimelockController.updateDelay, (newDelay));
 
         // Schedule the delay update
         vm.prank(proposer);
@@ -979,8 +973,7 @@ contract xTokenTimelockTest is Test {
         );
 
         // Verify new operations require the new delay
-        bytes memory testCallData =
-            abi.encodeWithSelector(xToken.pause.selector);
+        bytes memory testCallData = abi.encodeCall(xToken.pause, ());
 
         vm.prank(proposer);
         timelock.schedule(
@@ -1053,17 +1046,17 @@ contract xTokenTimelockTest is Test {
         values[1] = 0;
         values[2] = 0;
         values[3] = 0;
-        calldatas[0] = abi.encodeWithSelector(
-            IAccessControl.grantRole.selector, PROPOSER_ROLE, newProposer1
+        calldatas[0] = abi.encodeCall(
+            IAccessControl.grantRole, (PROPOSER_ROLE, newProposer1)
         );
-        calldatas[1] = abi.encodeWithSelector(
-            IAccessControl.grantRole.selector, CANCELLER_ROLE, newProposer1
+        calldatas[1] = abi.encodeCall(
+            IAccessControl.grantRole, (CANCELLER_ROLE, newProposer1)
         );
-        calldatas[2] = abi.encodeWithSelector(
-            IAccessControl.grantRole.selector, PROPOSER_ROLE, newProposer2
+        calldatas[2] = abi.encodeCall(
+            IAccessControl.grantRole, (PROPOSER_ROLE, newProposer2)
         );
-        calldatas[3] = abi.encodeWithSelector(
-            IAccessControl.grantRole.selector, EXECUTOR_ROLE, newExecutor1
+        calldatas[3] = abi.encodeCall(
+            IAccessControl.grantRole, (EXECUTOR_ROLE, newExecutor1)
         );
 
         // Schedule batch
@@ -1177,9 +1170,8 @@ contract xTokenTimelockTest is Test {
         // Step 3: Schedule new minter role grant
         console.log("\nStep 3: Schedule new minter grant");
         address newMinter = makeAddr("newMinter");
-        bytes memory grantRoleCallData = abi.encodeWithSelector(
-            IAccessControl.grantRole.selector, MINTER_ROLE, newMinter
-        );
+        bytes memory grantRoleCallData =
+            abi.encodeCall(IAccessControl.grantRole, (MINTER_ROLE, newMinter));
 
         vm.prank(proposer);
         timelock.schedule(

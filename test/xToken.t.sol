@@ -49,16 +49,18 @@ contract xTokenTest is Test {
         // Deploy xToken implementation
         xToken implementation = new xToken();
 
-        // Prepare initialization data
-        bytes memory initData = abi.encodeWithSelector(
-            xToken.initialize.selector,
-            "Test xToken",
-            "TEST",
-            admin,
-            denyLister,
-            minter,
-            receiver,
-            MAX_SUPPLY
+        // Prepare initialization data using abi.encodeCall for compile-time type checking
+        bytes memory initData = abi.encodeCall(
+            xToken.initialize,
+            (
+                "Test xToken",
+                "TEST",
+                admin,
+                denyLister,
+                minter,
+                receiver,
+                MAX_SUPPLY
+            )
         );
 
         // Deploy proxy with admin as both proxy admin owner and DEFAULT_ADMIN_ROLE holder
@@ -83,15 +85,17 @@ contract xTokenTest is Test {
 
     function test_Initialize_RevertWhen_ZeroAddressReceiver() public {
         xToken implementation = new xToken();
-        bytes memory initData = abi.encodeWithSelector(
-            xToken.initialize.selector,
-            "Test xToken",
-            "TEST",
-            admin,
-            denyLister,
-            minter,
-            address(0), // zero address receiver
-            MAX_SUPPLY
+        bytes memory initData = abi.encodeCall(
+            xToken.initialize,
+            (
+                "Test xToken",
+                "TEST",
+                admin,
+                denyLister,
+                minter,
+                address(0),
+                MAX_SUPPLY
+            )
         );
 
         vm.expectRevert(xToken.ZeroAddress.selector);
@@ -100,15 +104,9 @@ contract xTokenTest is Test {
 
     function test_Initialize_RevertWhen_ZeroMaxSupply() public {
         xToken implementation = new xToken();
-        bytes memory initData = abi.encodeWithSelector(
-            xToken.initialize.selector,
-            "Test xToken",
-            "TEST",
-            admin,
-            denyLister,
-            minter,
-            receiver,
-            0 // zero max supply
+        bytes memory initData = abi.encodeCall(
+            xToken.initialize,
+            ("Test xToken", "TEST", admin, denyLister, minter, receiver, 0)
         );
 
         vm.expectRevert(xToken.ZeroAmount.selector);
@@ -864,15 +862,17 @@ contract TokenERC20Test is Test {
         user2 = makeAddr("user2");
 
         xToken implementation = new xToken();
-        bytes memory initData = abi.encodeWithSelector(
-            xToken.initialize.selector,
-            "Test xToken",
-            "TEST",
-            admin,
-            denyLister,
-            minter,
-            receiver,
-            MAX_SUPPLY
+        bytes memory initData = abi.encodeCall(
+            xToken.initialize,
+            (
+                "Test xToken",
+                "TEST",
+                admin,
+                denyLister,
+                minter,
+                receiver,
+                MAX_SUPPLY
+            )
         );
         proxy = new Proxy(address(implementation), admin, initData);
         token = xToken(address(proxy));
