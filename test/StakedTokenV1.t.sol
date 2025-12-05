@@ -15,6 +15,7 @@ contract StakedTokenV1Test is Test {
     Proxy public proxy;
 
     address public admin;
+    address public denyLister;
     address public minter;
     address public receiver;
     address public oracle;
@@ -27,6 +28,7 @@ contract StakedTokenV1Test is Test {
 
     function setUp() public {
         admin = makeAddr("admin");
+        denyLister = makeAddr("denyLister");
         minter = makeAddr("minter");
         receiver = makeAddr("receiver");
         oracle = makeAddr("oracle");
@@ -34,24 +36,58 @@ contract StakedTokenV1Test is Test {
         // Deploy StakedTokenV1 implementation
         StakedTokenV1 implementation = new StakedTokenV1();
 
-        // Prepare initialization data
-        bytes memory initData = abi.encodeWithSelector(
-            xToken.initialize.selector,
-            "Staked Token",
-            "STK",
-            admin,
-            minter,
-            receiver,
-            MAX_SUPPLY
+        // Prepare initialization data using abi.encodeCall for compile-time type checking
+        // Unlike abi.encodeWithSelector, this will fail at compile time if parameters are wrong
+        bytes memory initData = abi.encodeCall(
+            xToken.initialize,
+            (
+                "Staked Token",
+                "STK",
+                admin,
+                denyLister,
+                minter,
+                receiver,
+                MAX_SUPPLY
+            )
         );
 
         // Deploy proxy
         proxy = new Proxy(address(implementation), admin, initData);
         stakedToken = StakedTokenV1(address(proxy));
 
+        // Verify initialization values are correct
+        _verifyInitialization();
+
         // Set oracle
         vm.prank(admin);
         stakedToken.updateOracle(oracle);
+    }
+
+    /// @dev Helper to verify all initialization values are correctly set
+    function _verifyInitialization() internal view {
+        // Verify token metadata
+        assertEq(stakedToken.name(), "Staked Token", "Name mismatch");
+        assertEq(stakedToken.symbol(), "STK", "Symbol mismatch");
+
+        // Verify roles
+        assertTrue(
+            stakedToken.hasRole(stakedToken.DEFAULT_ADMIN_ROLE(), admin),
+            "Admin role not set"
+        );
+        assertTrue(
+            stakedToken.hasRole(stakedToken.DENY_LISTER_ROLE(), denyLister),
+            "DenyLister role not set"
+        );
+        assertTrue(
+            stakedToken.hasRole(stakedToken.MINTER_ROLE(), minter),
+            "Minter role not set"
+        );
+
+        // Verify receiver and max supply
+        assertEq(
+            stakedToken.authorizedReceiver(), receiver, "Receiver mismatch"
+        );
+        assertEq(stakedToken.MAX_SUPPLY(), MAX_SUPPLY, "MAX_SUPPLY mismatch");
     }
 
     // ============ updateOracle Tests ============
@@ -121,14 +157,17 @@ contract StakedTokenV1Test is Test {
     function test_ExchangeRate_ReturnsZeroInitially() public {
         // Create fresh instance without setting rate
         StakedTokenV1 implementation = new StakedTokenV1();
-        bytes memory initData = abi.encodeWithSelector(
-            xToken.initialize.selector,
-            "Staked Token",
-            "STK",
-            admin,
-            minter,
-            receiver,
-            MAX_SUPPLY
+        bytes memory initData = abi.encodeCall(
+            xToken.initialize,
+            (
+                "Staked Token",
+                "STK",
+                admin,
+                denyLister,
+                minter,
+                receiver,
+                MAX_SUPPLY
+            )
         );
         Proxy freshProxy = new Proxy(address(implementation), admin, initData);
         StakedTokenV1 freshToken = StakedTokenV1(address(freshProxy));

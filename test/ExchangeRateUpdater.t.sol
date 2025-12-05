@@ -24,6 +24,7 @@ contract ExchangeRateUpdaterTest is Test {
     address public caller2;
     address public nonCaller;
     address public admin;
+    address public denyLister;
     address public minter;
     address public receiver;
 
@@ -48,21 +49,25 @@ contract ExchangeRateUpdaterTest is Test {
         caller2 = makeAddr("caller2");
         nonCaller = makeAddr("nonCaller");
         admin = makeAddr("admin");
+        denyLister = makeAddr("denyLister");
         minter = makeAddr("minter");
         receiver = makeAddr("receiver");
 
         // Deploy StakedTokenV1 implementation
         StakedTokenV1 implementation = new StakedTokenV1();
 
-        // Prepare initialization data (initialize is inherited from xToken)
-        bytes memory initData = abi.encodeWithSelector(
-            xToken.initialize.selector,
-            "OKX Staked ETH",
-            "xBETH",
-            admin, // denyLister / DEFAULT_ADMIN_ROLE
-            minter, // MINTER_ROLE
-            receiver, // authorized receiver
-            MAX_SUPPLY
+        // Prepare initialization data using abi.encodeCall for compile-time type checking
+        bytes memory initData = abi.encodeCall(
+            xToken.initialize,
+            (
+                "OKX Staked ETH",
+                "xBETH",
+                admin,
+                denyLister,
+                minter,
+                receiver,
+                MAX_SUPPLY
+            )
         );
 
         // Deploy proxy
@@ -71,11 +76,26 @@ contract ExchangeRateUpdaterTest is Test {
         // Get the token through the proxy
         stakedToken = StakedTokenV1(address(proxy));
 
+        // Verify initialization values are correct
+        _verifyTokenInitialization();
+
         // Deploy ExchangeRateUpdater with deployer as initial owner
         exchangeRateUpdater = new ExchangeRateUpdater(deployer);
 
         // Initialize the ExchangeRateUpdater
         exchangeRateUpdater.initialize(owner, address(stakedToken));
+
+        // Verify ExchangeRateUpdater initialization
+        assertEq(
+            exchangeRateUpdater.owner(),
+            owner,
+            "ExchangeRateUpdater owner mismatch"
+        );
+        assertEq(
+            exchangeRateUpdater.tokenContract(),
+            address(stakedToken),
+            "Token contract mismatch"
+        );
 
         // Set ExchangeRateUpdater as the oracle on StakedTokenV1
         vm.prank(admin);
@@ -88,6 +108,33 @@ contract ExchangeRateUpdaterTest is Test {
         // Configure caller1 as a whitelisted caller
         vm.prank(owner);
         exchangeRateUpdater.configureCaller(caller1, ALLOWANCE, INTERVAL);
+    }
+
+    /// @dev Helper to verify all token initialization values are correctly set
+    function _verifyTokenInitialization() internal view {
+        // Verify token metadata
+        assertEq(stakedToken.name(), "OKX Staked ETH", "Name mismatch");
+        assertEq(stakedToken.symbol(), "xBETH", "Symbol mismatch");
+
+        // Verify roles
+        assertTrue(
+            stakedToken.hasRole(stakedToken.DEFAULT_ADMIN_ROLE(), admin),
+            "Admin role not set"
+        );
+        assertTrue(
+            stakedToken.hasRole(stakedToken.DENY_LISTER_ROLE(), denyLister),
+            "DenyLister role not set"
+        );
+        assertTrue(
+            stakedToken.hasRole(stakedToken.MINTER_ROLE(), minter),
+            "Minter role not set"
+        );
+
+        // Verify receiver and max supply
+        assertEq(
+            stakedToken.authorizedReceiver(), receiver, "Receiver mismatch"
+        );
+        assertEq(stakedToken.MAX_SUPPLY(), MAX_SUPPLY, "MAX_SUPPLY mismatch");
     }
 
     // ============ Constructor Tests ============

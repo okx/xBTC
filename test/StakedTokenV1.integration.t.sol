@@ -17,6 +17,7 @@ contract StakedTokenV1IntegrationTest is Test {
     Proxy public proxy;
 
     address public admin;
+    address public denyLister;
     address public minter;
     address public receiver;
     address public oracleOwner;
@@ -30,6 +31,7 @@ contract StakedTokenV1IntegrationTest is Test {
 
     function setUp() public {
         admin = makeAddr("admin");
+        denyLister = makeAddr("denyLister");
         minter = makeAddr("minter");
         receiver = makeAddr("receiver");
         oracleOwner = makeAddr("oracleOwner");
@@ -37,17 +39,24 @@ contract StakedTokenV1IntegrationTest is Test {
 
         // Deploy StakedTokenV1
         StakedTokenV1 implementation = new StakedTokenV1();
-        bytes memory initData = abi.encodeWithSelector(
-            xToken.initialize.selector,
-            "OKX Staked ETH",
-            "xBETH",
-            admin,
-            minter,
-            receiver,
-            MAX_SUPPLY
+        // Use abi.encodeCall for compile-time type checking (safer than abi.encodeWithSelector)
+        bytes memory initData = abi.encodeCall(
+            xToken.initialize,
+            (
+                "OKX Staked ETH",
+                "xBETH",
+                admin,
+                denyLister,
+                minter,
+                receiver,
+                MAX_SUPPLY
+            )
         );
         proxy = new Proxy(address(implementation), admin, initData);
         stakedToken = StakedTokenV1(address(proxy));
+
+        // Verify initialization values are correct
+        _verifyTokenInitialization();
 
         // Deploy and configure ExchangeRateUpdater
         exchangeRateUpdater = new ExchangeRateUpdater(address(this));
@@ -70,6 +79,33 @@ contract StakedTokenV1IntegrationTest is Test {
         exchangeRateUpdater.configureCaller(
             oracleCaller, RATE_ALLOWANCE, RATE_INTERVAL
         );
+    }
+
+    /// @dev Helper to verify all token initialization values are correctly set
+    function _verifyTokenInitialization() internal view {
+        // Verify token metadata
+        assertEq(stakedToken.name(), "OKX Staked ETH", "Name mismatch");
+        assertEq(stakedToken.symbol(), "xBETH", "Symbol mismatch");
+
+        // Verify roles
+        assertTrue(
+            stakedToken.hasRole(stakedToken.DEFAULT_ADMIN_ROLE(), admin),
+            "Admin role not set"
+        );
+        assertTrue(
+            stakedToken.hasRole(stakedToken.DENY_LISTER_ROLE(), denyLister),
+            "DenyLister role not set"
+        );
+        assertTrue(
+            stakedToken.hasRole(stakedToken.MINTER_ROLE(), minter),
+            "Minter role not set"
+        );
+
+        // Verify receiver and max supply
+        assertEq(
+            stakedToken.authorizedReceiver(), receiver, "Receiver mismatch"
+        );
+        assertEq(stakedToken.MAX_SUPPLY(), MAX_SUPPLY, "MAX_SUPPLY mismatch");
     }
 
     function test_E2E_CompleteRateUpdateFlow() public {
