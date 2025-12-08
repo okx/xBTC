@@ -82,11 +82,7 @@ const config: HardhatUserConfig = {
   },
 
   etherscan: {
-    apiKey: {
-      // X Layer (custom network)
-      xlayer: process.env.XLAYER_API_KEY || "11111111",
-      xlayerTestnet: process.env.XLAYER_API_KEY || "11111111",
-    },
+    apiKey: "1111",
     customChains: [
       {
         network: "xlayer",
@@ -104,8 +100,11 @@ const config: HardhatUserConfig = {
           browserURL: "https://www.oklink.com/xlayer-test"
         }
       }
-    ]
+    ],
   },
+  sourcify: {
+    enabled: false
+  }
 };
 
 export default config;
