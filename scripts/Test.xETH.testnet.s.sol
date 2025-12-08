@@ -2,7 +2,7 @@
 pragma solidity 0.8.24;
 
 import {xETH} from "./Deploy.xETH.s.sol";
-import "./TestUtils.sol";
+import "./xTokenTestUtils.sol";
 
 /**
  * @title TestXETH

@@ -2,7 +2,7 @@
 pragma solidity 0.8.24;
 
 import {xSOL} from "./Deploy.xSOL.s.sol";
-import "./TestUtils.sol";
+import "./xTokenTestUtils.sol";
 
 /**
  * @title TestXSOL
