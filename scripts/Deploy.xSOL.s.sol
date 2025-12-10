@@ -28,7 +28,7 @@ contract xSOL is xToken {
  */
 contract DeployXSOL is DeployUtils {
     // Token configuration (hardcoded)
-    string public constant TOKEN_NAME = "xSOL";
+    string public constant TOKEN_NAME = "OKX Wrapped SOL";
     string public constant TOKEN_SYMBOL = "xSOL";
     uint256 public constant MAX_SUPPLY = 1_000_000_000 * 10 ** 9; // 1B with 9 decimals
 

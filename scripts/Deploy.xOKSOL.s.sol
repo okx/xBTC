@@ -31,7 +31,7 @@ contract xOKSOL is StakedTokenV1 {
  */
 contract DeployXOKSOL is DeployUtils {
     // Token configuration (hardcoded)
-    string public constant TOKEN_NAME = "xOKSOL";
+    string public constant TOKEN_NAME = "OKX Staked SOL";
     string public constant TOKEN_SYMBOL = "xOKSOL";
     uint256 public constant MAX_SUPPLY = 1_000_000_000 * 1e9; // 1B with 9 decimals
 
