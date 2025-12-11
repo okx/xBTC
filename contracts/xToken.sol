@@ -78,14 +78,14 @@ AccessControlUpgradeable
      * @param maxSupply The maximum supply of tokens (with decimal places included)
      */
     function initialize(
-        string calldata name,
-        string calldata symbol,
+        string memory name,
+        string memory symbol,
         address admin,
         address denyLister,
         address minter,
         address receiver,
         uint256 maxSupply
-    ) initializer external {
+    ) initializer public {
         __ERC20_init(name, symbol);
         __ERC20Pausable_init();
         __ERC20Permit_init(name);
