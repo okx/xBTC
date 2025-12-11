@@ -123,7 +123,8 @@ abstract contract DeployUtils is Script {
         address denyLister,
         address minter,
         address receiver,
-        uint256 maxSupply
+        uint256 maxSupply,
+        bytes32 proxySalt
     ) internal pure {
         console.log("=== Deployment Parameters ===");
         console.log("Name:", tokenName);
@@ -133,6 +134,8 @@ abstract contract DeployUtils is Script {
         console.log("Minter:", minter);
         console.log("Receiver:", receiver);
         console.log("Max Supply:", maxSupply);
+        console.log("Proxy Salt:");
+        console.logBytes32(proxySalt);
         console.log("");
     }
 

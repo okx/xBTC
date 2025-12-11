@@ -45,7 +45,7 @@ contract DeployXETH is DeployUtils {
         // Read optional salt from environment (with default)
         bytes32 proxySalt = _getEnvBytes32("PROXY_SALT", DEFAULT_PROXY_SALT);
 
-        _logDeploymentInfo(TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, receiver, MAX_SUPPLY);
+        _logDeploymentInfo(TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, receiver, MAX_SUPPLY, proxySalt);
 
         vm.startBroadcast();
 
