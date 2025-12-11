@@ -475,7 +475,7 @@ contract RateLimitHarnessTest is Test {
         assertGt(rateLimit.allowancesLastSet(caller1), initialTimestamp);
     }
 
-    function test_ReplenishAllowance_NoOpWhenAtMax() public {
+    function test_ReplenishAllowance_UpdatesTimestampWhenAtMax() public {
         vm.prank(owner);
         rateLimit.configureCaller(caller1, ALLOWANCE, INTERVAL);
 
@@ -486,8 +486,10 @@ contract RateLimitHarnessTest is Test {
 
         rateLimit.exposed_replenishAllowance(caller1);
 
-        // Timestamp should not change since allowance was already at max
-        assertEq(rateLimit.allowancesLastSet(caller1), initialTimestamp);
+        // Timestamp SHOULD update even when at max to prevent time accumulation vulnerability
+        assertGt(rateLimit.allowancesLastSet(caller1), initialTimestamp);
+        // Allowance should remain at max
+        assertEq(rateLimit.allowances(caller1), ALLOWANCE);
     }
 
     function test_ReplenishAllowance_GradualReplenishment() public {
@@ -504,6 +506,105 @@ contract RateLimitHarnessTest is Test {
         }
 
         // Should be back to full allowance
+        assertEq(rateLimit.allowances(caller1), ALLOWANCE);
+    }
+
+    /**
+     * @notice Test that the 2x maxAllowances vulnerability is fixed
+     * @dev Previously, after a long period of inactivity, two consecutive calls in the same block
+     *      could result in 2x maxAllowances being used due to stale allowancesLastSet timestamp.
+     *      This test verifies the fix prevents this scenario.
+     */
+    function test_ReplenishAllowance_Prevents2xMaxAllowancesInSameBlock()
+        public
+    {
+        vm.prank(owner);
+        rateLimit.configureCaller(caller1, ALLOWANCE, INTERVAL);
+
+        uint256 configuredTimestamp = block.timestamp;
+
+        // Warp forward by a full interval (simulating no activity)
+        vm.warp(configuredTimestamp + INTERVAL);
+
+        // First replenish call - at max allowance
+        rateLimit.exposed_replenishAllowance(caller1);
+
+        // Verify allowancesLastSet was updated even though at max
+        assertEq(
+            rateLimit.allowancesLastSet(caller1), configuredTimestamp + INTERVAL
+        );
+
+        // Manually reduce allowance (simulating usage of full allowance)
+        rateLimit.setAllowance(caller1, 0);
+
+        // Second replenish call in the SAME BLOCK
+        // With the fix, this should NOT replenish because allowancesLastSet was just updated
+        rateLimit.exposed_replenishAllowance(caller1);
+
+        // Verify: allowance should still be 0 (no replenishment in same block)
+        assertEq(rateLimit.allowances(caller1), 0);
+    }
+
+    /**
+     * @notice Test the vulnerability scenario with the original bug behavior
+     * @dev This test demonstrates what WOULD have happened without the fix:
+     *      The second replenish would have used the stale timestamp to calculate a full replenishment
+     */
+    function test_ReplenishAllowance_CorrectBehaviorAfterMultipleIntervals()
+        public
+    {
+        vm.prank(owner);
+        rateLimit.configureCaller(caller1, ALLOWANCE, INTERVAL);
+
+        uint256 configuredTimestamp = block.timestamp;
+
+        // Warp forward by multiple intervals
+        vm.warp(configuredTimestamp + INTERVAL * 5);
+
+        // First replenish - should cap at maxAllowances and update timestamp
+        rateLimit.exposed_replenishAllowance(caller1);
+        assertEq(rateLimit.allowances(caller1), ALLOWANCE);
+        assertEq(
+            rateLimit.allowancesLastSet(caller1),
+            configuredTimestamp + INTERVAL * 5
+        );
+
+        // Use all allowance
+        rateLimit.setAllowance(caller1, 0);
+
+        // Second replenish in same block - should NOT replenish anything
+        rateLimit.exposed_replenishAllowance(caller1);
+        assertEq(rateLimit.allowances(caller1), 0);
+
+        // Now warp half interval and replenish - should get half allowance
+        vm.warp(block.timestamp + INTERVAL / 2);
+        rateLimit.exposed_replenishAllowance(caller1);
+        assertEq(rateLimit.allowances(caller1), ALLOWANCE / 2);
+    }
+
+    /**
+     * @notice Verify timestamp is updated on replenish even when no amount is replenished
+     * @dev Edge case: time passed but no replenishment needed (already at max)
+     */
+    function test_ReplenishAllowance_TimestampUpdatedEvenWhenNoReplenishmentNeeded(
+    ) public {
+        vm.prank(owner);
+        rateLimit.configureCaller(caller1, ALLOWANCE, INTERVAL);
+
+        uint256 initialTimestamp = rateLimit.allowancesLastSet(caller1);
+
+        // Warp time, but allowance is already at max
+        vm.warp(initialTimestamp + INTERVAL / 4);
+
+        // Call replenish
+        rateLimit.exposed_replenishAllowance(caller1);
+
+        // Timestamp should be updated to prevent accumulation
+        assertEq(
+            rateLimit.allowancesLastSet(caller1),
+            initialTimestamp + INTERVAL / 4
+        );
+        // Allowance unchanged at max
         assertEq(rateLimit.allowances(caller1), ALLOWANCE);
     }
 }

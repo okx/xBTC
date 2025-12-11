@@ -168,6 +168,9 @@ contract RateLimit is Ownable {
      */
     function _replenishAllowance(address caller) internal {
         if (allowances[caller] == maxAllowances[caller]) {
+            // Update timestamp even when at max to prevent time accumulation
+            // This fixes a vulnerability where stale timestamps could allow 2x maxAllowances updates in one block
+            allowancesLastSet[caller] = block.timestamp;
             return;
         }
         uint256 amountToReplenish = _getReplenishAmount(caller);

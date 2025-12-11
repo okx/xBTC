@@ -521,4 +521,79 @@ contract ExchangeRateUpdaterTest is Test {
             initialAllowance - rateChange
         );
     }
+
+    // ============ 2x maxAllowances Vulnerability Fix Tests ============
+
+    /**
+     * @notice Test that prevents 2x maxAllowances exchange rate change in the same block
+     * @dev This tests the fix for the vulnerability where after a long period of inactivity,
+     *      two consecutive updateExchangeRate calls in the same block could allow
+     *      2x maxAllowances of rate change due to stale allowancesLastSet timestamp.
+     */
+    function test_UpdateExchangeRate_Prevents2xMaxAllowancesInSameBlock()
+        public
+    {
+        // Configure caller with specific allowance
+        vm.prank(owner);
+        exchangeRateUpdater.configureCaller(caller1, ALLOWANCE, INTERVAL);
+
+        uint256 configuredTimestamp = block.timestamp;
+
+        // Warp forward by a full interval (simulating no activity)
+        vm.warp(configuredTimestamp + INTERVAL);
+
+        // First update - use full allowance
+        uint256 firstNewRate = INITIAL_EXCHANGE_RATE + ALLOWANCE;
+        vm.prank(caller1);
+        exchangeRateUpdater.updateExchangeRate(firstNewRate);
+
+        // Verify allowance is depleted
+        assertEq(exchangeRateUpdater.allowances(caller1), 0);
+
+        // Verify allowancesLastSet was updated
+        assertEq(
+            exchangeRateUpdater.allowancesLastSet(caller1),
+            configuredTimestamp + INTERVAL
+        );
+
+        // Second update in SAME BLOCK should fail due to insufficient allowance
+        uint256 secondNewRate = firstNewRate + 1; // Even a tiny change should fail
+        vm.prank(caller1);
+        vm.expectRevert(
+            "ExchangeRateUpdater: exchange rate update exceeds allowance"
+        );
+        exchangeRateUpdater.updateExchangeRate(secondNewRate);
+
+        // Exchange rate should still be at first update value
+        assertEq(stakedToken.exchangeRate(), firstNewRate);
+    }
+
+    /**
+     * @notice Test that after waiting, allowance replenishes correctly for subsequent updates
+     * @dev Verifies that the fix doesn't break normal replenishment behavior
+     */
+    function test_UpdateExchangeRate_NormalReplenishmentAfterUsage() public {
+        // Configure caller
+        vm.prank(owner);
+        exchangeRateUpdater.configureCaller(caller1, ALLOWANCE, INTERVAL);
+
+        // First update - use full allowance
+        uint256 firstNewRate = INITIAL_EXCHANGE_RATE + ALLOWANCE;
+        vm.prank(caller1);
+        exchangeRateUpdater.updateExchangeRate(firstNewRate);
+
+        assertEq(exchangeRateUpdater.allowances(caller1), 0);
+
+        // Warp half interval - should get half allowance back
+        vm.warp(block.timestamp + INTERVAL / 2);
+
+        // Second update with half allowance
+        uint256 halfAllowance = ALLOWANCE / 2;
+        uint256 secondNewRate = firstNewRate + halfAllowance;
+
+        vm.prank(caller1);
+        exchangeRateUpdater.updateExchangeRate(secondNewRate);
+
+        assertEq(stakedToken.exchangeRate(), secondNewRate);
+    }
 }
