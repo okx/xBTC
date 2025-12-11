@@ -38,7 +38,7 @@ contract DeployXETH is DeployUtils {
         address minter = vm.envAddress("MINTER");
         address receiver = vm.envAddress("RECEIVER");
 
-        _logDeploymentInfo(TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, receiver, MAX_SUPPLY);
+        _logDeploymentInfo(TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, receiver, MAX_SUPPLY, bytes32(0));
 
         vm.startBroadcast();
 
