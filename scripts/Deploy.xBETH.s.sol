@@ -31,7 +31,7 @@ contract xBETH is StakedTokenV1 {
  */
 contract DeployXBETH is DeployUtils {
     // Token configuration (hardcoded)
-    string public constant TOKEN_NAME = "OKX Staked ETH";
+    string public constant TOKEN_NAME = "OKX Wrapped Staked ETH";
     string public constant TOKEN_SYMBOL = "xBETH";
     uint256 public constant MAX_SUPPLY = 1_000_000_000 * 1e18; // 1B with 18 decimals
 

@@ -30,7 +30,7 @@ contract DeployXETH is DeployUtils {
     // Token configuration (hardcoded)
     string public constant TOKEN_NAME = "OKX Wrapped ETH";
     string public constant TOKEN_SYMBOL = "xETH";
-    uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** 18; // 100M with 18 decimals
+    uint256 public constant MAX_SUPPLY = 1_000_000_000 * 10 ** 18; // 1B with 18 decimals
 
     // Default salt (can be overridden via env)
     bytes32 public constant DEFAULT_PROXY_SALT = keccak256("okx-xETH-proxy-v1");
