@@ -3,6 +3,7 @@ pragma solidity 0.8.24;
 
 import "./DeployUtils.sol";
 import {xBETH} from "contracts/verify/xBETH.sol";
+import {AtomicStakedTokenDeployer} from "scripts/AtomicStakedTokenDeployer.sol";
 
 
 /**
@@ -18,16 +19,12 @@ import {xBETH} from "contracts/verify/xBETH.sol";
  * - RECEIVER: Initial authorized receiver for minting operations
  * - ORACLE_OWNER: Address that owns the ExchangeRateUpdater
  * - ORACLE_CALLER: Address authorized to call updateExchangeRate
- * - PROXY_SALT: Salt for proxy deployment (optional)
  */
 contract DeployXBETH is DeployUtils {
     // Token configuration (hardcoded)
     string public constant TOKEN_NAME = "OKX Wrapped Staked ETH";
     string public constant TOKEN_SYMBOL = "xBETH";
     uint256 public constant MAX_SUPPLY = 1_000_000_000 * 1e18; // 1B with 18 decimals
-
-    // Default salt (can be overridden via env)
-    bytes32 public constant DEFAULT_PROXY_SALT = keccak256("okx-xBETH-proxy-v1");
 
     // Oracle config (hardcoded)
     uint256 public constant INITIAL_EXCHANGE_RATE = 1e18; // 1:1 ratio
@@ -36,6 +33,7 @@ contract DeployXBETH is DeployUtils {
 
     function run() external {
         // Read addresses from environment
+        // for both proxy admin and xToken DEFAULT_ADMIN_ROLE
         address admin = vm.envAddress("ADMIN");
         address denyLister = vm.envAddress("DENY_LISTER");
         address minter = vm.envAddress("MINTER");
@@ -43,53 +41,61 @@ contract DeployXBETH is DeployUtils {
         address oracleOwner = vm.envAddress("ORACLE_OWNER");
         address oracleCaller = vm.envAddress("ORACLE_CALLER");
 
-        // Read optional salt from environment (with default)
-        bytes32 proxySalt = _getEnvBytes32("PROXY_SALT", DEFAULT_PROXY_SALT);
+        address singletonFactory = _singletonFactory();
+        // Single salt for implementation + atomic deployer + proxy (global default in DeployUtils, override via env `SALT`)
+        bytes32 salt = _salt();
 
-        _logDeploymentInfo(TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, receiver, MAX_SUPPLY, proxySalt);
+        _logDeploymentInfo(TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, receiver, MAX_SUPPLY, salt);
         _logOracleInfo(oracleOwner, oracleCaller, INITIAL_EXCHANGE_RATE, RATE_ALLOWANCE, RATE_INTERVAL);
 
         vm.startBroadcast();
 
-        // Step 1: Deploy implementation (regular deployment)
-        xBETH implementation = new xBETH();
-        console.log("Implementation deployed at:", address(implementation));
+        // Step 1: Deploy implementation deterministically via EIP-2470 (multi-chain consistent)
+        address implementation = _deployDeterministic(type(xBETH).creationCode, salt);
+        console.log("Implementation deployed at:", implementation);
 
-        // Step 2: Prepare initialization data
-        bytes memory initData = _encodeTokenInitData(
-            TOKEN_NAME,
-            TOKEN_SYMBOL,
-            admin,
-            denyLister,
-            minter,
-            receiver,
-            MAX_SUPPLY
+        // Step 2: Deterministically deploy AtomicStakedTokenDeployer (its address is baked into proxy initData via address(this))
+        bytes memory atomicInitCode = abi.encodePacked(
+            type(AtomicStakedTokenDeployer).creationCode,
+            abi.encode(
+                implementation,
+                admin, // proxyAdmin
+                TOKEN_NAME,
+                TOKEN_SYMBOL,
+                admin, // tokenAdmin
+                denyLister,
+                minter,
+                receiver,
+                MAX_SUPPLY,
+                oracleOwner,
+                oracleCaller,
+                INITIAL_EXCHANGE_RATE,
+                RATE_ALLOWANCE,
+                RATE_INTERVAL,
+                singletonFactory,
+                salt
+            )
         );
-
-        // Step 3: Deploy proxy with initialization (deterministic via EIP-2470)
-        address proxy = _deployProxyDeterministic(
-            address(implementation),
-            admin,
-            initData,
-            proxySalt
-        );
+        address atomicAddr = _deployDeterministic(atomicInitCode, salt);
+        AtomicStakedTokenDeployer atomic = AtomicStakedTokenDeployer(atomicAddr);
+        address proxy = atomic.proxy();
+        address exchangeRateUpdater = atomic.exchangeRateUpdater();
+        console.log("Atomic deployer:", atomicAddr);
         console.log("Proxy deployed at:", proxy);
-
-        // Steps 4-9: Initialize oracle
-        address exchangeRateUpdater = _initializeStakedTokenOracle(
-            proxy,
-            admin,
-            oracleOwner,
-            oracleCaller,
-            INITIAL_EXCHANGE_RATE,
-            RATE_ALLOWANCE,
-            RATE_INTERVAL
-        );
+        console.log("ExchangeRateUpdater deployed at:", exchangeRateUpdater);
 
         // Verify deployment
         _verifyTokenDeployment(proxy, TOKEN_NAME, TOKEN_SYMBOL, 18, admin, denyLister, minter, receiver, MAX_SUPPLY);
-        _verifyStakedTokenDeployment(proxy, exchangeRateUpdater, INITIAL_EXCHANGE_RATE);
-        _logDeploymentComplete(TOKEN_NAME, proxy, address(implementation));
+        _verifyStakedTokenDeploymentComplete(
+            proxy,
+            exchangeRateUpdater,
+            INITIAL_EXCHANGE_RATE,
+            oracleOwner,
+            oracleCaller,
+            RATE_ALLOWANCE,
+            RATE_INTERVAL
+        );
+        _logDeploymentComplete(TOKEN_NAME, proxy, implementation);
         _logOracleComplete(exchangeRateUpdater, oracleOwner, oracleCaller);
     }
 }

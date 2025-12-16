@@ -16,16 +16,12 @@ import {xETH} from "contracts/verify/xETH.sol";
  * - DENY_LISTER: Address that will receive DENY_LISTER_ROLE
  * - MINTER: Address that will receive MINTER_ROLE
  * - RECEIVER: Initial authorized receiver for minting operations
- * - PROXY_SALT: Salt for proxy deployment (optional)
  */
 contract DeployXETH is DeployUtils {
     // Token configuration (hardcoded)
     string public constant TOKEN_NAME = "OKX Wrapped ETH";
     string public constant TOKEN_SYMBOL = "xETH";
     uint256 public constant MAX_SUPPLY = 1_000_000_000 * 10 ** 18; // 1B with 18 decimals
-
-    // Default salt (can be overridden via env)
-    bytes32 public constant DEFAULT_PROXY_SALT = keccak256("okx-xETH-proxy-v1");
 
     function run() external {
         // Read addresses from environment
@@ -34,16 +30,16 @@ contract DeployXETH is DeployUtils {
         address minter = vm.envAddress("MINTER");
         address receiver = vm.envAddress("RECEIVER");
 
-        // Read optional salt from environment (with default)
-        bytes32 proxySalt = _getEnvBytes32("PROXY_SALT", DEFAULT_PROXY_SALT);
+        // Single salt for implementation + proxy (global default in DeployUtils, override via env `SALT`)
+        bytes32 salt = _salt();
 
-        _logDeploymentInfo(TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, receiver, MAX_SUPPLY, proxySalt);
+        _logDeploymentInfo(TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, receiver, MAX_SUPPLY, salt);
 
         vm.startBroadcast();
 
-        // Step 1: Deploy implementation (regular deployment)
-        xETH implementation = new xETH();
-        console.log("Implementation deployed at:", address(implementation));
+        // Step 1: Deploy implementation deterministically via EIP-2470 (multi-chain consistent)
+        address implementation = _deployDeterministic(type(xETH).creationCode, salt);
+        console.log("Implementation deployed at:", implementation);
 
         // Step 2: Prepare initialization data
         bytes memory initData = _encodeTokenInitData(
@@ -58,17 +54,18 @@ contract DeployXETH is DeployUtils {
 
         // Step 3: Deploy proxy with initialization (deterministic via EIP-2470)
         address proxy = _deployProxyDeterministic(
-            address(implementation),
+            implementation,
             admin,
             initData,
-            proxySalt
+            salt
         );
         console.log("Proxy deployed at:", proxy);
 
         vm.stopBroadcast();
 
         // Verify deployment
+        _verifyEIP1967Proxy(proxy, implementation, admin);
         _verifyTokenDeployment(proxy, TOKEN_NAME, TOKEN_SYMBOL, 18, admin, denyLister, minter, receiver, MAX_SUPPLY);
-        _logDeploymentComplete(TOKEN_NAME, proxy, address(implementation));
+        _logDeploymentComplete(TOKEN_NAME, proxy, implementation);
     }
 }
