@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import "./DeployUtils.sol";
+import "./DeployTimelock.s.sol";
 import {xOKSOL} from "contracts/verify/xOKSOL.sol";
 import {AtomicStakedTokenDeployer} from "scripts/AtomicStakedTokenDeployer.sol";
 
@@ -10,17 +10,18 @@ import {AtomicStakedTokenDeployer} from "scripts/AtomicStakedTokenDeployer.sol";
  * @title DeployXOKSOL
  * @notice Foundry script to deploy xOKSOL staked token with proxy and oracle
  * @dev Uses EIP-2470 SingletonFactory for deterministic proxy deployment
+ *      Deploys TimelockController first, sets it as proxy admin and DEFAULT_ADMIN_ROLE
  *      xOKSOL extends StakedTokenV1 which includes exchange rate oracle functionality
  *
  * Environment variables required:
- * - ADMIN: Address that will receive DEFAULT_ADMIN_ROLE
+ * - TIMELOCK_CALLER: Address that will be proposer and executor of timelock
  * - DENY_LISTER: Address that will receive DENY_LISTER_ROLE
  * - MINTER: Address that will receive MINTER_ROLE
  * - RECEIVER: Initial authorized receiver for minting operations
  * - ORACLE_OWNER: Address that owns the ExchangeRateUpdater
  * - ORACLE_CALLER: Address authorized to call updateExchangeRate
  */
-contract DeployXOKSOL is DeployUtils {
+contract DeployXOKSOL is TimelockDeployUtils {
     // Token configuration (hardcoded)
     string public constant TOKEN_NAME = "OKX Wrapped Staked SOL";
     string public constant TOKEN_SYMBOL = "xOKSOL";
@@ -33,7 +34,7 @@ contract DeployXOKSOL is DeployUtils {
 
     function run() external {
         // Read addresses from environment
-        address admin = vm.envAddress("ADMIN");
+        address timelockCaller = vm.envAddress("TIMELOCK_CALLER");
         address denyLister = vm.envAddress("DENY_LISTER");
         address minter = vm.envAddress("MINTER");
         address receiver = vm.envAddress("RECEIVER");
@@ -44,24 +45,28 @@ contract DeployXOKSOL is DeployUtils {
         // Single salt for implementation + atomic deployer + proxy (global default in DeployUtils, override via env `SALT`)
         bytes32 salt = _salt();
 
-        _logDeploymentInfo(TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, receiver, MAX_SUPPLY, salt);
-        _logOracleInfo(oracleOwner, oracleCaller, INITIAL_EXCHANGE_RATE, RATE_ALLOWANCE, RATE_INTERVAL);
-
         vm.startBroadcast();
 
-        // Step 1: Deploy implementation deterministically via EIP-2470 (multi-chain consistent)
+        // Step 1: Deploy TimelockController deterministically (timelock as proxy admin and DEFAULT_ADMIN_ROLE)
+        address timelock = _deployTimelockDeterministic(timelockCaller);
+        console.log("TimelockController deployed at:", timelock);
+
+        _logDeploymentInfo(TOKEN_NAME, TOKEN_SYMBOL, timelock, denyLister, minter, receiver, MAX_SUPPLY, salt);
+        _logOracleInfo(oracleOwner, oracleCaller, INITIAL_EXCHANGE_RATE, RATE_ALLOWANCE, RATE_INTERVAL);
+
+        // Step 2: Deploy implementation deterministically via EIP-2470 (multi-chain consistent)
         address implementation = _deployDeterministic(type(xOKSOL).creationCode, salt);
         console.log("Implementation deployed at:", implementation);
 
-        // Step 2: Deterministically deploy AtomicStakedTokenDeployer (its address is baked into proxy initData via address(this))
+        // Step 3: Deterministically deploy AtomicStakedTokenDeployer (its address is baked into proxy initData via address(this))
         bytes memory atomicInitCode = abi.encodePacked(
             type(AtomicStakedTokenDeployer).creationCode,
             abi.encode(
                 implementation,
-                admin, // proxyAdmin
+                timelock, // proxyAdmin (timelock)
                 TOKEN_NAME,
                 TOKEN_SYMBOL,
-                admin, // tokenAdmin
+                timelock, // tokenAdmin (timelock as DEFAULT_ADMIN_ROLE)
                 denyLister,
                 minter,
                 receiver,
@@ -83,8 +88,10 @@ contract DeployXOKSOL is DeployUtils {
         console.log("Proxy deployed at:", proxy);
         console.log("ExchangeRateUpdater deployed at:", exchangeRateUpdater);
 
+        vm.stopBroadcast();
+
         // Verify deployment
-        _verifyTokenDeployment(proxy, TOKEN_NAME, TOKEN_SYMBOL, 9, admin, denyLister, minter, receiver, MAX_SUPPLY);
+        _verifyTokenDeployment(proxy, TOKEN_NAME, TOKEN_SYMBOL, 9, timelock, denyLister, minter, receiver, MAX_SUPPLY);
         _verifyStakedTokenDeploymentComplete(
             proxy,
             exchangeRateUpdater,

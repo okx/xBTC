@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import "./DeployUtils.sol";
+import "./DeployTimelock.s.sol";
 import {xETH} from "contracts/verify/xETH.sol";
-
 
 
 /**
  * @title DeployXETH
  * @notice Foundry script to deploy xETH token with proxy
  * @dev Uses EIP-2470 SingletonFactory for deterministic proxy deployment
+ *      Deploys TimelockController first, sets it as proxy admin and DEFAULT_ADMIN_ROLE
  *
  * Environment variables required:
- * - ADMIN: Address that will receive DEFAULT_ADMIN_ROLE
+ * - TIMELOCK_CALLER: Address that will be proposer and executor of timelock
  * - DENY_LISTER: Address that will receive DENY_LISTER_ROLE
  * - MINTER: Address that will receive MINTER_ROLE
  * - RECEIVER: Initial authorized receiver for minting operations
  */
-contract DeployXETH is DeployUtils {
+contract DeployXETH is TimelockDeployUtils {
     // Token configuration (hardcoded)
     string public constant TOKEN_NAME = "OKX Wrapped ETH";
     string public constant TOKEN_SYMBOL = "xETH";
@@ -25,7 +25,7 @@ contract DeployXETH is DeployUtils {
 
     function run() external {
         // Read addresses from environment
-        address admin = vm.envAddress("ADMIN");
+        address timelockCaller = vm.envAddress("TIMELOCK_CALLER");
         address denyLister = vm.envAddress("DENY_LISTER");
         address minter = vm.envAddress("MINTER");
         address receiver = vm.envAddress("RECEIVER");
@@ -33,29 +33,33 @@ contract DeployXETH is DeployUtils {
         // Single salt for implementation + proxy (global default in DeployUtils, override via env `SALT`)
         bytes32 salt = _salt();
 
-        _logDeploymentInfo(TOKEN_NAME, TOKEN_SYMBOL, admin, denyLister, minter, receiver, MAX_SUPPLY, salt);
-
         vm.startBroadcast();
 
-        // Step 1: Deploy implementation deterministically via EIP-2470 (multi-chain consistent)
+        // Step 1: Deploy TimelockController deterministically (timelock as proxy admin and DEFAULT_ADMIN_ROLE)
+        address timelock = _deployTimelockDeterministic(timelockCaller);
+        console.log("TimelockController deployed at:", timelock);
+
+        _logDeploymentInfo(TOKEN_NAME, TOKEN_SYMBOL, timelock, denyLister, minter, receiver, MAX_SUPPLY, salt);
+
+        // Step 2: Deploy implementation deterministically via EIP-2470 (multi-chain consistent)
         address implementation = _deployDeterministic(type(xETH).creationCode, salt);
         console.log("Implementation deployed at:", implementation);
 
-        // Step 2: Prepare initialization data
+        // Step 3: Prepare initialization data (timelock as DEFAULT_ADMIN_ROLE)
         bytes memory initData = _encodeTokenInitData(
             TOKEN_NAME,
             TOKEN_SYMBOL,
-            admin,
+            timelock, // DEFAULT_ADMIN_ROLE
             denyLister,
             minter,
             receiver,
             MAX_SUPPLY
         );
 
-        // Step 3: Deploy proxy with initialization (deterministic via EIP-2470)
+        // Step 4: Deploy proxy with initialization (deterministic via EIP-2470, timelock as proxy admin)
         address proxy = _deployProxyDeterministic(
             implementation,
-            admin,
+            timelock, // proxy admin
             initData,
             salt
         );
@@ -64,8 +68,8 @@ contract DeployXETH is DeployUtils {
         vm.stopBroadcast();
 
         // Verify deployment
-        _verifyEIP1967Proxy(proxy, implementation, admin);
-        _verifyTokenDeployment(proxy, TOKEN_NAME, TOKEN_SYMBOL, 18, admin, denyLister, minter, receiver, MAX_SUPPLY);
+        _verifyEIP1967Proxy(proxy, implementation, timelock);
+        _verifyTokenDeployment(proxy, TOKEN_NAME, TOKEN_SYMBOL, 18, timelock, denyLister, minter, receiver, MAX_SUPPLY);
         _logDeploymentComplete(TOKEN_NAME, proxy, implementation);
     }
 }
