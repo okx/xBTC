@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import {StakedTokenV1} from "../StakedTokenV1.sol";
+import {StakedTokenV1} from "contracts/StakedTokenV1.sol";
 
 /**
  * @title xOKSOL
