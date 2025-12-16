@@ -18,7 +18,7 @@ contract TestXOKSOL is StakedTokenTestUtils {
     
     // Override: Return token name
     function getTokenName() internal pure override returns (string memory) {
-        return "OKX Staked SOL";
+        return "OKX Wrapped Staked SOL";
     }
     
     // Override: Return token symbol

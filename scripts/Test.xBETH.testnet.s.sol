@@ -18,7 +18,7 @@ contract TestXBETH is StakedTokenTestUtils {
     
     // Override: Return token name
     function getTokenName() internal pure override returns (string memory) {
-        return "OKX Staked ETH";
+        return "OKX Wrapped Staked ETH";
     }
     
     // Override: Return token symbol
