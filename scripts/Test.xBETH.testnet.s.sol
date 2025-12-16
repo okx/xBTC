@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import {xBETH} from "./Deploy.xBETH.s.sol";
+import {xBETH} from "contracts/verify/xBETH.sol";
 import "./StakedTokenTestUtils.sol";
 
 /**

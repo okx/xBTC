@@ -2,17 +2,8 @@
 pragma solidity 0.8.24;
 
 import "./DeployUtils.sol";
+import {xBETH} from "contracts/verify/xBETH.sol";
 
-/**
- * @title xBETH
- * @notice xBETH staked token with 18 decimals
- * @dev Extends StakedTokenV1 which includes exchange rate oracle functionality
- */
-contract xBETH is StakedTokenV1 {
-    function decimals() public pure override returns (uint8) {
-        return 18;
-    }
-}
 
 /**
  * @title DeployXBETH

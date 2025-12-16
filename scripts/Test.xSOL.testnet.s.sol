@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import {xSOL} from "./Deploy.xSOL.s.sol";
+import {xSOL} from "contracts/verify/xSOL.sol";
 import "./xTokenTestUtils.sol";
 
 /**
@@ -18,7 +18,7 @@ contract TestXSOL is TestUtils {
     
     // Override: Return token name
     function getTokenName() internal pure override returns (string memory) {
-        return "xSOL";
+        return "OKX Wrapped SOL";
     }
     
     // Override: Return token symbol

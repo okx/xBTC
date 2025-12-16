@@ -2,17 +2,9 @@
 pragma solidity 0.8.24;
 
 import "./DeployUtils.sol";
-import {xToken} from "../contracts/xToken.sol";
+import {xETH} from "contracts/verify/xETH.sol";
 
-/**
- * @title xETH
- * @notice xETH token with 18 decimals
- */
-contract xETH is xToken {
-    function decimals() public pure override returns (uint8) {
-        return 18;
-    }
-}
+
 
 /**
  * @title DeployXETH

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import {xOKSOL} from "./Deploy.xOKSOL.s.sol";
+import {xOKSOL} from "contracts/verify/xOKSOL.sol";
 import "./StakedTokenTestUtils.sol";
 
 /**

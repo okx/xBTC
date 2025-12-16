@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import {xETH} from "./Deploy.xETH.s.sol";
+import {xETH} from "contracts/verify/xETH.sol";
 import "./xTokenTestUtils.sol";
 
 /**
@@ -18,7 +18,7 @@ contract TestXETH is TestUtils {
     
     // Override: Return token name
     function getTokenName() internal pure override returns (string memory) {
-        return "xETH";
+        return "OKX Wrapped ETH";
     }
     
     // Override: Return token symbol
@@ -33,7 +33,7 @@ contract TestXETH is TestUtils {
     
     // Override: Return max supply
     function getMaxSupply() internal pure override returns (uint256) {
-        return 100_000_000 * 10 ** 18;
+        return 1_000_000_000 * 10 ** 18;
     }
     
     // Override: Deploy xETH implementation
