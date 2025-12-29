@@ -122,7 +122,7 @@ AccessControlUpgradeable
 
     /**
      * @dev Mints new tokens to the authorized receiver address
-     * @param amount The amount of tokens to mint (in 8 decimal places)
+     * @param amount The amount of tokens to mint
      * Requirements:
      * - Only addresses with MINTER_ROLE can call this function
      * - Contract must not be paused
@@ -145,7 +145,7 @@ AccessControlUpgradeable
 
     /**
      * @dev Burns tokens from the caller's balance
-     * @param amount The amount of tokens to burn (in 8 decimal places)
+     * @param amount The amount of tokens to burn
      * Requirements:
      * - Only addresses with MINTER_ROLE can call this function
      * - Contract must not be paused
