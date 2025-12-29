@@ -786,6 +786,27 @@ contract xTokenTest is Test {
         token.transferFrom(receiver, user2, 100);
     }
 
+    function test_TransferFrom_RevertWhen_SpenderInDenyList() public {
+        // Mint tokens to receiver
+        vm.prank(minter);
+        token.mint(receiver, 1000);
+
+        // Receiver approves user1 to spend their tokens
+        vm.prank(receiver);
+        token.approve(user1, 100);
+
+        // Add user1 (the spender) to deny list
+        vm.prank(denyLister);
+        token.addToDenyList(user1);
+
+        // Try to transfer using allowance - should fail because spender (user1) is denylisted
+        vm.prank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(xToken.SenderInDenyList.selector, user1)
+        );
+        token.transferFrom(receiver, user2, 100);
+    }
+
     // ============ View Function Tests ============
 
     function test_Version() public view {

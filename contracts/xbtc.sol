@@ -296,6 +296,7 @@ AccessControlUpgradeable
      * @param value The amount of tokens being transferred
      * Requirements:
      * - Neither sender nor recipient can be in the deny list
+     * - msg.sender (spender) cannot be in the deny list
      */
     function _update(
         address from,
@@ -304,6 +305,7 @@ AccessControlUpgradeable
     ) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
         if (denyList[from]) revert SenderInDenyList(from);
         if (denyList[to]) revert RecipientInDenyList(to);
+        if (denyList[msg.sender]) revert SenderInDenyList(msg.sender);
 
         super._update(from, to, value);
     }
