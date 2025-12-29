@@ -120,6 +120,7 @@ contract StakedTokenV1 is xToken {
     /**
      * @dev Returns the current exchange rate scaled by by 10**18
      * @return _exchangeRate The exchange rate
+     * @notice Returns 0 before the oracle's first update
      */
     function exchangeRate() public view returns (uint256 _exchangeRate) {
         bytes32 position = _EXCHANGE_RATE_POSITION;
