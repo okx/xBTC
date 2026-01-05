@@ -337,6 +337,6 @@ AccessControlUpgradeable
      * @return The version string of the contract
      */
     function version() public pure returns (string memory) {
-        return "1.0.0";
+        return "1.0.1";
     }
 }
