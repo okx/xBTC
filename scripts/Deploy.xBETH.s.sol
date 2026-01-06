@@ -1,27 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import "./DeployTimelock.s.sol";
+import "scripts/DeployUtils.sol";
 import {xBETH} from "contracts/verify/xBETH.sol";
 import {AtomicStakedTokenDeployer} from "scripts/AtomicStakedTokenDeployer.sol";
-
 
 /**
  * @title DeployXBETH
  * @notice Foundry script to deploy xBETH staked token with proxy and oracle
  * @dev Uses EIP-2470 SingletonFactory for deterministic proxy deployment
- *      Deploys TimelockController first, sets it as proxy admin and DEFAULT_ADMIN_ROLE
  *      xBETH extends StakedTokenV1 which includes exchange rate oracle functionality
  *
  * Environment variables required:
- * - TIMELOCK_CALLER: Address that will be proposer and executor of timelock
+ * - TIMELOCK_ADDRESS: Pre-deployed TimelockController address
  * - DENY_LISTER: Address that will receive DENY_LISTER_ROLE
  * - MINTER: Address that will receive MINTER_ROLE
  * - RECEIVER: Initial authorized receiver for minting operations
  * - ORACLE_OWNER: Address that owns the ExchangeRateUpdater
  * - ORACLE_CALLER: Address authorized to call updateExchangeRate
  */
-contract DeployXBETH is TimelockDeployUtils {
+contract DeployXBETH is DeployUtils {
     // Token configuration (hardcoded)
     string public constant TOKEN_NAME = "OKX Wrapped Staked ETH";
     string public constant TOKEN_SYMBOL = "xBETH";
@@ -34,7 +32,7 @@ contract DeployXBETH is TimelockDeployUtils {
 
     function run() external {
         // Read addresses from environment
-        address timelockCaller = vm.envAddress("TIMELOCK_CALLER");
+        address timelock = vm.envAddress("TIMELOCK_ADDRESS");
         address denyLister = vm.envAddress("DENY_LISTER");
         address minter = vm.envAddress("MINTER");
         address receiver = vm.envAddress("RECEIVER");
@@ -47,18 +45,14 @@ contract DeployXBETH is TimelockDeployUtils {
 
         vm.startBroadcast();
 
-        // Step 1: Deploy TimelockController deterministically (timelock as proxy admin and DEFAULT_ADMIN_ROLE)
-        address timelock = _deployTimelockDeterministic(timelockCaller);
-        console.log("TimelockController deployed at:", timelock);
-
         _logDeploymentInfo(TOKEN_NAME, TOKEN_SYMBOL, timelock, denyLister, minter, receiver, MAX_SUPPLY, salt);
         _logOracleInfo(oracleOwner, oracleCaller, INITIAL_EXCHANGE_RATE, RATE_ALLOWANCE, RATE_INTERVAL);
 
-        // Step 2: Deploy implementation deterministically via EIP-2470 (multi-chain consistent)
+        // Step 1: Deploy implementation deterministically via EIP-2470 (multi-chain consistent)
         address implementation = _deployDeterministic(type(xBETH).creationCode, salt);
         console.log("Implementation deployed at:", implementation);
 
-        // Step 3: Deterministically deploy AtomicStakedTokenDeployer (its address is baked into proxy initData via address(this))
+        // Step 2: Deterministically deploy AtomicStakedTokenDeployer (its address is baked into proxy initData via address(this))
         bytes memory atomicInitCode = abi.encodePacked(
             type(AtomicStakedTokenDeployer).creationCode,
             abi.encode(
