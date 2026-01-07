@@ -122,7 +122,7 @@ AccessControlUpgradeable
 
     /**
      * @dev Mints new tokens to the authorized receiver address
-     * @param amount The amount of tokens to mint (in 8 decimal places)
+     * @param amount The amount of tokens to mint
      * Requirements:
      * - Only addresses with MINTER_ROLE can call this function
      * - Contract must not be paused
@@ -145,7 +145,7 @@ AccessControlUpgradeable
 
     /**
      * @dev Burns tokens from the caller's balance
-     * @param amount The amount of tokens to burn (in 8 decimal places)
+     * @param amount The amount of tokens to burn
      * Requirements:
      * - Only addresses with MINTER_ROLE can call this function
      * - Contract must not be paused
@@ -302,6 +302,7 @@ AccessControlUpgradeable
      * @param value The amount of tokens being transferred
      * Requirements:
      * - Neither sender nor recipient can be in the deny list
+     * - msg.sender (spender) cannot be in the deny list
      */
     function _update(
         address from,
@@ -310,6 +311,7 @@ AccessControlUpgradeable
     ) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
         if (denyList[from]) revert SenderInDenyList(from);
         if (denyList[to]) revert RecipientInDenyList(to);
+        if (denyList[msg.sender]) revert SenderInDenyList(msg.sender);
 
         super._update(from, to, value);
     }
