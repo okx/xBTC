@@ -11,6 +11,7 @@ remappings = [
 # Solidity compiler settings
 optimizer = true
 optimizer_runs = 1000000
+via_ir = true
 
 [fmt]
 line_length = 80

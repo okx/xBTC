@@ -2,10 +2,11 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Script.sol";
-import {Proxy} from "../contracts/Proxy.sol";
-import {xToken} from "../contracts/xToken.sol";
-import {StakedTokenV1} from "../contracts/StakedTokenV1.sol";
-import {ExchangeRateUpdater} from "../contracts/ExchangeRateUpdater.sol";
+import {Proxy} from "contracts/Proxy.sol";
+import {xToken} from "contracts/xToken.sol";
+import {StakedTokenV1} from "contracts/StakedTokenV1.sol";
+import {ExchangeRateUpdater} from "contracts/ExchangeRateUpdater.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title ISingletonFactory
@@ -13,7 +14,6 @@ import {ExchangeRateUpdater} from "../contracts/ExchangeRateUpdater.sol";
  */
 interface ISingletonFactory {
     function deploy(bytes memory _initCode, bytes32 _salt) external returns (address payable createdContract);
-    function getAddress(bytes memory _initCode, bytes32 _salt) external view returns (address);
 }
 
 /**
@@ -22,47 +22,99 @@ interface ISingletonFactory {
  * @dev Uses EIP-2470 SingletonFactory for deterministic proxy deployment
  */
 abstract contract DeployUtils is Script {
-    // EIP-2470 SingletonFactory address (same on all chains)
-    address public constant SINGLETON_FACTORY = 0xFaC897544659Fb136C064d5428947f5BC9cC1Fa2;
+    // EIP-2470 SingletonFactory default address
+    address public constant DEFAULT_SINGLETON_FACTORY = 0xFaC897544659Fb136C064d5428947f5BC9cC1Fa2;
+    // Global default salt for deterministic deployments
+    bytes32 internal constant DEFAULT_SALT = keccak256("OKX-xAsset");
+
+    // EIP-1967 slots
+    bytes32 internal constant _EIP1967_IMPLEMENTATION_SLOT =
+        bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
+    bytes32 internal constant _EIP1967_ADMIN_SLOT =
+        bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
+
+    /**
+     * @notice Get address from environment with fallback to default value
+     */
+    function _getEnvAddress(string memory key, address defaultValue) internal view returns (address) {
+        try vm.envAddress(key) returns (address value) {
+            return value;
+        } catch {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * @notice EIP-2470 SingletonFactory address used for deterministic deployments
+     * @dev Read from env `SINGLETON_FACTORY` with fallback to DEFAULT_SINGLETON_FACTORY.
+     */
+    function _singletonFactory() internal view returns (address) {
+        return _getEnvAddress("SINGLETON_FACTORY", DEFAULT_SINGLETON_FACTORY);
+    }
+
+    function _salt() internal view returns (bytes32) {
+        return _getEnvBytes32("SALT", DEFAULT_SALT);
+    }
+
+    /**
+     * @notice Predict deterministic proxy address for EIP-2470 SingletonFactory CREATE2 deployment
+     */
+    function _predictDeterministicAddress(address singletonFactory, bytes memory initCode, bytes32 salt) internal pure returns (address) {
+        bytes32 initCodeHash = keccak256(initCode);
+        bytes32 raw = keccak256(abi.encodePacked(bytes1(0xff), singletonFactory, salt, initCodeHash));
+        return address(uint160(uint256(raw)));
+    }
+
+    /**
+     * @notice Deploy arbitrary init code deterministically using EIP-2470 SingletonFactory (CREATE2)
+     * @dev Reverts if the predicted address is already occupied (fail-closed).
+     */
+    function _deployDeterministic(bytes memory initCode, bytes32 salt) internal returns (address deployed) {
+        ISingletonFactory factory = ISingletonFactory(_singletonFactory());
+        address predicted = _predictDeterministicAddress(address(factory), initCode, salt);
+        console.log("Predicted address:", predicted);
+        require(predicted.code.length == 0, "Already deployed at predicted address");
+        address actual = factory.deploy(initCode, salt);
+        require(actual == predicted, "Deterministic deploy address mismatch");
+        return actual;
+    }
 
     /**
      * @notice Deploy proxy deterministically using EIP-2470 SingletonFactory
      * @param implementation Address of the implementation contract
-     * @param admin Address that will receive DEFAULT_ADMIN_ROLE and proxy admin
+     * @param proxyAdmin Address that can upgrade the proxy (EIP-1967 admin slot)
      * @param initData Encoded initialization data for the proxy
      * @param salt Salt for deterministic deployment
      * @return proxy Address of the deployed proxy
      */
     function _deployProxyDeterministic(
         address implementation,
-        address admin,
+        address proxyAdmin,
         bytes memory initData,
         bytes32 salt
     ) internal returns (address proxy) {
         // Create proxy init code with constructor args
         bytes memory proxyInitCode = abi.encodePacked(
             type(Proxy).creationCode,
-            abi.encode(implementation, admin, initData)
+            abi.encode(implementation, proxyAdmin, initData)
         );
+        return _deployDeterministic(proxyInitCode, salt);
+    }
 
-        ISingletonFactory factory = ISingletonFactory(SINGLETON_FACTORY);
-
-        // Predict the deployment address before deploying
-        address predictedAddress = factory.getAddress(proxyInitCode, salt);
-        console.log("Predicted proxy address:", predictedAddress);
-
-        // Check if already deployed
-        if (predictedAddress.code.length > 0) {
-            console.log("Proxy already deployed at predicted address");
-            return predictedAddress;
-        }
-
-        // Deploy using EIP-2470 SingletonFactory
-        address deployedAddress = factory.deploy(proxyInitCode, salt);
-
-        require(deployedAddress == predictedAddress, "Proxy address mismatch");
-
-        return deployedAddress;
+    /**
+     * @notice Verify EIP-1967 proxy slots (implementation/admin) match expectations
+     * @dev Uses Foundry cheatcode `vm.load` so it works even though proxies don't expose admin().
+     */
+    function _verifyEIP1967Proxy(
+        address proxy,
+        address expectedImplementation,
+        address expectedProxyAdmin
+    ) internal view {
+        bytes32 implSlot = vm.load(proxy, _EIP1967_IMPLEMENTATION_SLOT);
+        bytes32 adminSlot = vm.load(proxy, _EIP1967_ADMIN_SLOT);
+        address proxyAdmin = Ownable(address(uint160(uint256(adminSlot)))).owner();
+        require(address(uint160(uint256(implSlot))) == expectedImplementation, "EIP1967: implementation mismatch");
+        require(proxyAdmin == expectedProxyAdmin, "EIP1967: admin mismatch");
     }
 
     /**
@@ -123,8 +175,9 @@ abstract contract DeployUtils is Script {
         address denyLister,
         address minter,
         address receiver,
-        uint256 maxSupply
-    ) internal pure {
+        uint256 maxSupply,
+        bytes32 salt
+    ) internal view {
         console.log("=== Deployment Parameters ===");
         console.log("Name:", tokenName);
         console.log("Symbol:", tokenSymbol);
@@ -133,6 +186,9 @@ abstract contract DeployUtils is Script {
         console.log("Minter:", minter);
         console.log("Receiver:", receiver);
         console.log("Max Supply:", maxSupply);
+        console.log("Factory:", _singletonFactory());
+        console.log("Salt:");
+        console.logBytes32(salt);
         console.log("");
     }
 
@@ -332,6 +388,46 @@ abstract contract DeployUtils is Script {
         uint256 actualExchangeRate = token.exchangeRate();
         require(actualExchangeRate == expectedExchangeRate, "Exchange rate mismatch");
         console.log("Exchange Rate:", actualExchangeRate);
+    }
+
+    /**
+     * @notice Verify staked token + ExchangeRateUpdater configuration (oracle, rate, ownership, caller limits)
+     * @dev This is meant to be a "fail-closed" guard against CPIMP/front-run style partial-config deployments.
+     */
+    function _verifyStakedTokenDeploymentComplete(
+        address proxy,
+        address expectedUpdaterOracle,
+        uint256 expectedExchangeRate,
+        address expectedOracleOwner,
+        address expectedOracleCaller,
+        uint256 expectedRateAllowance,
+        uint256 expectedRateInterval
+    ) internal view {
+        StakedTokenV1 token = StakedTokenV1(proxy);
+        ExchangeRateUpdater updater = ExchangeRateUpdater(expectedUpdaterOracle);
+
+        // Token-side checks
+        address actualOracle = token.oracle();
+        require(actualOracle == expectedUpdaterOracle, "Oracle mismatch");
+
+        uint256 actualExchangeRate = token.exchangeRate();
+        require(actualExchangeRate == expectedExchangeRate, "Exchange rate mismatch");
+
+        // Updater-side checks
+        require(updater.owner() == expectedOracleOwner, "Updater owner mismatch");
+        require(updater.tokenContract() == proxy, "Updater tokenContract mismatch");
+        require(updater.callers(expectedOracleCaller), "Updater caller not enabled");
+        require(updater.maxAllowances(expectedOracleCaller) == expectedRateAllowance, "Caller allowance mismatch");
+        require(updater.allowances(expectedOracleCaller) == expectedRateAllowance, "Caller stored allowance mismatch");
+        require(updater.intervals(expectedOracleCaller) == expectedRateInterval, "Caller interval mismatch");
+
+        console.log("Oracle:", actualOracle);
+        console.log("Exchange Rate:", actualExchangeRate);
+        console.log("Updater Owner:", updater.owner());
+        console.log("Updater TokenContract:", updater.tokenContract());
+        console.log("Caller Enabled:", updater.callers(expectedOracleCaller));
+        console.log("Caller Allowance:", updater.maxAllowances(expectedOracleCaller));
+        console.log("Caller Interval:", updater.intervals(expectedOracleCaller));
     }
 
     /**

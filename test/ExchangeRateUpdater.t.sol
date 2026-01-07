@@ -60,7 +60,7 @@ contract ExchangeRateUpdaterTest is Test {
         bytes memory initData = abi.encodeCall(
             xToken.initialize,
             (
-                "OKX Staked ETH",
+                "OKX Wrapped Staked ETH",
                 "xBETH",
                 admin,
                 denyLister,
@@ -113,7 +113,7 @@ contract ExchangeRateUpdaterTest is Test {
     /// @dev Helper to verify all token initialization values are correctly set
     function _verifyTokenInitialization() internal view {
         // Verify token metadata
-        assertEq(stakedToken.name(), "OKX Staked ETH", "Name mismatch");
+        assertEq(stakedToken.name(), "OKX Wrapped Staked ETH", "Name mismatch");
         assertEq(stakedToken.symbol(), "xBETH", "Symbol mismatch");
 
         // Verify roles

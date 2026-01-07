@@ -1,6 +1,5 @@
+// SPDX-License-Identifier: MIT
 /**
- * SPDX-License-Identifier: MIT
- *
  * Copyright (c) 2022 Coinbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy

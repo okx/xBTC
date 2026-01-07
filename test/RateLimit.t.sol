@@ -553,10 +553,13 @@ contract RateLimitHarnessTest is Test {
     function test_ReplenishAllowance_CorrectBehaviorAfterMultipleIntervals()
         public
     {
+        // Reset timestamp to a known state
+        vm.warp(1);
+
         vm.prank(owner);
         rateLimit.configureCaller(caller1, ALLOWANCE, INTERVAL);
 
-        uint256 configuredTimestamp = block.timestamp;
+        uint256 configuredTimestamp = rateLimit.allowancesLastSet(caller1);
 
         // Warp forward by multiple intervals
         vm.warp(configuredTimestamp + INTERVAL * 5);
