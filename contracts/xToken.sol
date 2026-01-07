@@ -112,7 +112,7 @@ AccessControlUpgradeable
      * - Only addresses with DENY_LISTER_ROLE can call this function
      * - newReceiver cannot be the zero address
      */
-    function setReceiver(address newReceiver) public onlyRole(DENY_LISTER_ROLE) {
+    function setReceiver(address newReceiver) external onlyRole(DENY_LISTER_ROLE) {
         if (newReceiver == address(0)) revert ZeroAddress();
         address previousReceiver = authorizedReceiver;
         authorizedReceiver = newReceiver;
@@ -131,7 +131,7 @@ AccessControlUpgradeable
      * - Authorized receiver must be set
      */
     function mint(address receiver, uint256 amount)
-    public
+    external
     onlyRole(MINTER_ROLE)
     whenNotPaused
     {
@@ -153,7 +153,7 @@ AccessControlUpgradeable
      * - Caller must have sufficient balance to burn
      */
     function burn(uint256 amount)
-    public
+    external
     onlyRole(MINTER_ROLE)
     whenNotPaused
     {
@@ -169,7 +169,7 @@ AccessControlUpgradeable
      * Requirements:
      * - Only addresses with DENY_LISTER_ROLE can call this function
      */
-    function pause() public onlyRole(DENY_LISTER_ROLE) {
+    function pause() external onlyRole(DENY_LISTER_ROLE) {
         _pause();
     }
 
@@ -178,7 +178,7 @@ AccessControlUpgradeable
      * Requirements:
      * - Only addresses with DENY_LISTER_ROLE can call this function
      */
-    function unpause() public onlyRole(DENY_LISTER_ROLE) {
+    function unpause() external onlyRole(DENY_LISTER_ROLE) {
         _unpause();
     }
 
@@ -190,7 +190,7 @@ AccessControlUpgradeable
      * - Accounts array cannot be empty
      * - Cannot add zero address to deny list
      */
-    function batchAddToDenyList(address[] memory accounts) public onlyRole(DENY_LISTER_ROLE) {
+    function batchAddToDenyList(address[] calldata accounts) external onlyRole(DENY_LISTER_ROLE) {
         if (accounts.length == 0) revert EmptyArray();
         
         for (uint256 i = 0; i < accounts.length; i++) {
@@ -211,7 +211,7 @@ AccessControlUpgradeable
      * - Only addresses with DENY_LISTER_ROLE can call this function
      * - Accounts array cannot be empty
      */
-    function batchRemoveFromDenyList(address[] memory accounts) public onlyRole(DENY_LISTER_ROLE) {
+    function batchRemoveFromDenyList(address[] calldata accounts) external onlyRole(DENY_LISTER_ROLE) {
         if (accounts.length == 0) revert EmptyArray();
         
         for (uint256 i = 0; i < accounts.length; i++) {
@@ -230,7 +230,7 @@ AccessControlUpgradeable
      * - Only addresses with DENY_LISTER_ROLE can call this function
      * - Cannot add zero address to deny list
      */
-    function addToDenyList(address account) public onlyRole(DENY_LISTER_ROLE) {
+    function addToDenyList(address account) external onlyRole(DENY_LISTER_ROLE) {
         if (account == address(0)) revert ZeroAddress();
 
         denyList[account] = true;
@@ -243,7 +243,7 @@ AccessControlUpgradeable
      * Requirements:
      * - Only addresses with DENY_LISTER_ROLE can call this function
      */
-    function removeFromDenyList(address account) public onlyRole(DENY_LISTER_ROLE) {
+    function removeFromDenyList(address account) external onlyRole(DENY_LISTER_ROLE) {
         denyList[account] = false;
         emit RemovedFromDenyList(account);
     }
@@ -257,7 +257,7 @@ AccessControlUpgradeable
      * - New minter cannot be zero address
      * - New minter cannot be the same as current minter
      */
-    function transferMinter(address newMinter) public onlyRole(MINTER_ROLE) {
+    function transferMinter(address newMinter) external onlyRole(MINTER_ROLE) {
         if (newMinter == address(0)) revert ZeroAddress();
         if (newMinter == msg.sender) revert SameValue();
 
@@ -280,7 +280,7 @@ AccessControlUpgradeable
      * - New deny lister cannot be zero address
      * - New deny lister cannot be the same as current deny lister
      */
-    function transferDenyLister(address newDenyLister) public onlyRole(DENY_LISTER_ROLE) {
+    function transferDenyLister(address newDenyLister) external onlyRole(DENY_LISTER_ROLE) {
         if (newDenyLister == address(0)) revert ZeroAddress();
         if (newDenyLister == msg.sender) revert SameValue();
 

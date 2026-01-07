@@ -71,10 +71,6 @@ contract ExchangeRateUpdater is RateLimit {
             "ExchangeRateUpdater: contract is already initialized"
         );
         require(
-            newOwner != address(0),
-            "ExchangeRateUpdater: owner is the zero address"
-        );
-        require(
             newTokenContract != address(0),
             "ExchangeRateUpdater: tokenContract is the zero address"
         );
