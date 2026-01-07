@@ -1,6 +1,8 @@
-# OKX x-Assets
+# OKX xAsset EVM
 
-Upgradeable ERC-20 wrapped and staked token implementations on EVM
+xAssets are centralized issued ERC-20 tokens backed by OKX, containing 2 categories:
+1. Wrapped Tokens (1:1 Backed). Direct on-chain representations of underlying assets with guaranteed 1:1 backing by OKX reserves. Example: xBTC, xETH, xSOL.
+2. Liquid Staking Tokens (Yield-Bearing). Tokenized staking positions that accrue staking rewards while remaining fully liquid and transferable. Example: xBETH, xOKSOL.
 
 ## Supported Tokens
 
@@ -115,25 +117,25 @@ Built on OpenZeppelin's upgradeable contracts with:
 ## Project Structure
 
 ```
-xAssets/
-├── contracts/
-│   ├── Token.sol              # Base token implementation
-│   ├── StakedTokenV1.sol      # Staked token with exchange rate
-│   ├── ExchangeRateUpdater.sol # Rate-limited exchange rate updates
-│   ├── RateLimit.sol          # Base rate limiting logic
-│   ├── xBTC.sol               # Wrapped BTC (8 decimals)
-│   ├── xETH.sol               # Wrapped ETH (18 decimals)
-│   ├── xSOL.sol               # Wrapped SOL (9 decimals)
-│   ├── xBETH.sol              # Staked ETH (18 decimals)
-│   ├── xOKSOL.sol             # Staked SOL (9 decimals)
-│   └── Proxy.sol              # Transparent upgradeable proxy
-├── test/
-│   ├── Token.t.sol          # Foundry tests for base token
-│   ├── StakedTokenV1.t.sol  # Foundry tests for staked token
-│   └── xBTC.*.test.ts       # Hardhat tests for xBTC
-├── scripts/                 # Deployment and utility scripts
-├── hardhat.config.ts        # Hardhat configuration
-└── foundry.toml             # Foundry configuration
+├── contracts/                   # production Solidity contracts
+│   ├── xToken.sol
+│   ├── xbtc.sol
+│   ├── xbtcProxy.sol
+│   ├── StakedTokenV1.sol
+│   ├── ExchangeRateUpdater.sol
+│   ├── ExchangeRateUtil.sol
+│   ├── RateLimit.sol
+│   ├── Proxy.sol
+│   └── verify/                  # explorer verification sources (xETH/xSOL/xBETH/xOKSOL)
+├── scripts/                     # Hardhat TS scripts + Foundry scripts/utils (.s.sol/.sol)
+│   ├── deploy.ts
+│   ├── deployment-config.ts
+│   └── Deploy.*.s.sol
+├── test/                        # Hardhat (.ts) + Foundry (.t.sol) tests
+│   ├── xBTC.*.test.ts
+│   └── *.t.sol
+├── hardhat.config.ts
+└── foundry.toml
 ```
 
 ## Development
@@ -149,7 +151,7 @@ yarn
 
 ### Testing
 
-#### Foundry Tests (Recommended for Solidity)
+#### Foundry Tests
 ```bash
 # Run all Foundry tests
 forge test
@@ -161,7 +163,7 @@ forge test -vvv
 forge test --match-path test/Token.t.sol
 ```
 
-#### Hardhat Tests
+#### Hardhat Tests (xBTC only)
 ```bash
 # Run all Hardhat tests
 npx hardhat test
@@ -180,11 +182,6 @@ npx hardhat coverage
 ```
 
 ## Deployment
-
-### Using Foundry (Recommended)
-```bash
-
-```
 
 ### xBTC Hardhat Deployment
 
