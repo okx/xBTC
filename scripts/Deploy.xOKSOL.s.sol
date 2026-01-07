@@ -28,8 +28,9 @@ contract DeployXOKSOL is DeployUtils {
 
     // Oracle config (hardcoded)
     uint256 public constant INITIAL_EXCHANGE_RATE = 1e18; // 1:1 ratio for 18 decimals
-    uint256 public constant RATE_ALLOWANCE = 1e16; // 1% change allowed
-    uint256 public constant RATE_INTERVAL = 1 days;
+    // 48h <= 0.076%
+    uint256 public constant RATE_ALLOWANCE = 76e13; // 0.076% = 0.00076 * 1e18 = 76e13
+    uint256 public constant RATE_INTERVAL = 48 hours;
 
     function run() external {
         // Read addresses from environment

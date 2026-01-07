@@ -27,8 +27,9 @@ contract DeployXBETH is DeployUtils {
 
     // Oracle config (hardcoded)
     uint256 public constant INITIAL_EXCHANGE_RATE = 1e18; // 1:1 ratio
-    uint256 public constant RATE_ALLOWANCE = 1e16; // 1% change allowed
-    uint256 public constant RATE_INTERVAL = 1 days;
+    // 24h <= 0.028%
+    uint256 public constant RATE_ALLOWANCE = 28e13; // 0.028% = 0.00028 * 1e18 = 28e13
+    uint256 public constant RATE_INTERVAL = 24 hours;
 
     function run() external {
         // Read addresses from environment
