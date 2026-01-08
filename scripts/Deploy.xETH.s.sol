@@ -31,6 +31,7 @@ contract DeployXETH is DeployUtils {
 
         // Single salt for implementation + proxy (global default in DeployUtils, override via env `SALT`)
         bytes32 salt = _salt();
+        bytes32 proxySalt = vm.envBytes32("PROXY_SALT");
 
         vm.startBroadcast();
 
@@ -56,7 +57,7 @@ contract DeployXETH is DeployUtils {
             implementation,
             timelock, // proxy admin
             initData,
-            salt
+            proxySalt
         );
         console.log("Proxy deployed at:", proxy);
 

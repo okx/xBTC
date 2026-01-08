@@ -61,6 +61,12 @@ abstract contract DeployUtils is Script {
      */
     function _predictDeterministicAddress(address singletonFactory, bytes memory initCode, bytes32 salt) internal pure returns (address) {
         bytes32 initCodeHash = keccak256(initCode);
+        console.log("Singleton factory:");
+        console.logAddress(singletonFactory);
+        console.log("Init code hash:");
+        console.logBytes32(initCodeHash);
+        console.log("Salt:");
+        console.logBytes32(salt);
         bytes32 raw = keccak256(abi.encodePacked(bytes1(0xff), singletonFactory, salt, initCodeHash));
         return address(uint160(uint256(raw)));
     }
