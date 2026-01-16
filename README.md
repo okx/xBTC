@@ -10,14 +10,14 @@ xAssets are centralized issued ERC-20 tokens backed by OKX, containing 2 categor
 | Token | Deployed Address |
 |-------|------------------|
 | xBTC  | https://www.oklink.com/zh-hans/x-layer/token/0xb7C00000bcDEeF966b20B3D884B98E64d2b06b4f |
-| xETH  | |
-| xSOL  | |
+| xETH  | https://www.oklink.com/zh-hans/x-layer/token/0xe7b000003a45145decf8a28fc755ad5ec5ea025a |
+| xSOL  | https://www.oklink.com/zh-hans/x-layer/token/0x505000008de8748dbd4422ff4687a4fc9beba15b |
 
 ### Staked Tokens
 | Token   | Deployed Address |
 |---------|------------------|
-| xBETH   | |
-| xOKSOL  | |
+| xBETH   | https://www.oklink.com/zh-hans/x-layer/token/0xafeab3b85b6a56cf5f02317f0f7a23340eb983d7 |
+| xOKSOL  | https://www.oklink.com/zh-hans/x-layer/token/0x14a686103854dab7b8801e31979caa595835b25d |
 
 ## Architecture
 
