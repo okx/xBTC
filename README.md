@@ -200,6 +200,12 @@ npx hardhat run scripts/deploy.ts --network sepolia
 
 Make sure you have Hardhat installed and configured correctly before running the deployment script.
 
+## Audits
+
+The contracts have been audited by the following auditors:
+- [Zellic](./audits/xAsset%20-%20Zellic%20Audit%20Report.pdf)
+- [OKX](./audits/OKX%20xAsset%20Audit%20Report.pdf)
+
 ## Credits
 
 The staked token implementation (`StakedTokenV1.sol`) and exchange rate contracts (`ExchangeRateUpdater.sol`, `ExchangeRateUtil.sol`, `RateLimit.sol`) are derived from Coinbase's [wrapped-tokens-os](https://github.com/coinbase/wrapped-tokens-os) project (cbETH).
