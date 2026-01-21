@@ -56,8 +56,8 @@ contract ExchangeRateUpdater is RateLimit {
     event ExchangeRateUpdated(address indexed caller, uint256 amount);
 
     /**
-     * @dev Function to initialize the contract
-     * @dev Can an only be called once by the deployer of the contract
+     * @dev One-time configuration function for this non-upgradeable contract
+     * @dev Can only be called once by the current owner
      * @dev The caller is responsible for ensuring that both the new owner and the token contract are configured correctly
      * @param newOwner The address of the new owner of the exchange rate updater contract, can either be an EOA or a contract
      * @param newTokenContract The address of the token contract whose exchange rate is updated
@@ -81,8 +81,8 @@ contract ExchangeRateUpdater is RateLimit {
 
     /**
      * @dev Rate limited function to update token's exchange rate
-     * @param _newExchangeRate The new exchange rate. Must be less than or equal
-     * to the allowance of the caller.
+     * @param _newExchangeRate The new exchange rate. The absolute change from
+     * the current exchange rate must be less than or equal to the caller's allowance
      */
     function updateExchangeRate(uint256 _newExchangeRate)
         public

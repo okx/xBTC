@@ -50,7 +50,7 @@ contract RateLimit is Ownable {
 
     /**
      * @dev Mapping denoting when a given caller's allowance was last updated
-     * @return The time in seconds since a given caller's allowance was last updated
+     * @return The timestamp (in seconds) when a given caller's allowance was last updated
      */
     mapping(address => uint256) public allowancesLastSet;
 
