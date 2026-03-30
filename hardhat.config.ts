@@ -7,13 +7,12 @@ dotenv.config();
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.28",
+    version: "0.8.24",
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 1000000,
       },
-      viaIR: true,
     },
   },
   gasReporter: {
@@ -75,7 +74,37 @@ const config: HardhatUserConfig = {
       accounts: process.env.AVALANCHE_PRIVATE_KEY ? [process.env.AVALANCHE_PRIVATE_KEY] : [],
       gasPrice: 25000000000, // 25 gwei
     },
+    xlayerTestnet: {
+      url: process.env.XLAYER_TESTNET_RPC_URL || "https://testrpc.xlayer.tech",
+      chainId: 1952,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
   },
+
+  etherscan: {
+    apiKey: "1111",
+    customChains: [
+      {
+        network: "xlayer",
+        chainId: 196,
+        urls: {
+          apiURL: "https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/XLAYER",
+          browserURL: "https://www.oklink.com/xlayer"
+        }
+      },
+      {
+        network: "xlayerTestnet",
+        chainId: 1952,
+        urls: {
+          apiURL: "https://www.oklink.com/api/v5/explorer/contract/verify-source-code-plugin/XLAYER_TESTNET",
+          browserURL: "https://www.oklink.com/xlayer-test"
+        }
+      }
+    ],
+  },
+  sourcify: {
+    enabled: false
+  }
 };
 
 export default config;

@@ -120,7 +120,7 @@ contract ForkTestTimelockUpdateMinDelay is Script {
 
         // Prepare the call: updateDelay(newMinDelay)
         // Note: updateDelay can only be called by the timelock itself
-        bytes memory updateDelayCalldata = abi.encodeWithSelector(TimelockController.updateDelay.selector, newMinDelay);
+        bytes memory updateDelayCalldata = abi.encodeCall(TimelockController.updateDelay, (newMinDelay));
 
         console.log("Calldata (updateDelay):");
         console.logBytes(updateDelayCalldata);

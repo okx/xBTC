@@ -1,25 +1,23 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
- * @title xbtc
- * @dev An upgradeable ERC-20 token contract implementing xBTC
+ * @title xToken
+ * @dev An upgradeable ERC-20 token contract for OKX x-Assets
  * Features:
  * - ERC-20 standard token functionality
  * - ERC-2612 gasless approvals (permit)
  * - Role-based access control (Deny Lister and Minter roles)
  * - Pausable transfers
  * - Deny list functionality for compliance
- * - Fixed supply cap of 21 million tokens
- * - 8 decimal precision (matching Bitcoin)
  */
-contract xbtc is
+contract xToken is
 Initializable,
 ERC20Upgradeable,
 ERC20PausableUpgradeable,
@@ -32,8 +30,8 @@ AccessControlUpgradeable
     /// @dev Role identifier for addresses that can pause/unpause and manage deny list
     bytes32 public constant DENY_LISTER_ROLE = keccak256("DENY_LISTER_ROLE");
 
-    /// @dev Maximum token supply: 21 million tokens with 8 decimal places
-    uint256 public constant MAX_SUPPLY = 21_000_000 * 10**8;
+    /// @dev Maximum token supply set during initialization
+    uint256 public MAX_SUPPLY;
 
     // Custom Errors
     error ZeroAddress();
@@ -73,23 +71,27 @@ AccessControlUpgradeable
      * @dev Initializes the upgradeable contract with token details and role assignments
      * @param name The name of the token (e.g., "xBTC")
      * @param symbol The symbol of the token (e.g., "xBTC")
-     * @param denyLister The address that will receive DENY_LISTER_ROLE and DEFAULT_ADMIN_ROLE
+     * @param admin The address that will receive DEFAULT_ADMIN_ROLE
+     * @param denyLister The address that will receive DENY_LISTER_ROLE
      * @param minter The address that will receive MINTER_ROLE for minting/burning tokens
      * @param receiver The initial authorized receiver address for minting operations
+     * @param maxSupply The maximum supply of tokens (with decimal places included)
      */
     function initialize(
         string memory name,
         string memory symbol,
+        address admin,
         address denyLister,
         address minter,
-        address receiver
+        address receiver,
+        uint256 maxSupply
     ) initializer public {
         __ERC20_init(name, symbol);
         __ERC20Pausable_init();
         __ERC20Permit_init(name);
         __AccessControl_init();
 
-        _grantRole(DEFAULT_ADMIN_ROLE, denyLister);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(DENY_LISTER_ROLE, denyLister);
         _grantRole(MINTER_ROLE, minter);
 
@@ -97,6 +99,10 @@ AccessControlUpgradeable
         if (receiver == address(0)) revert ZeroAddress();
         authorizedReceiver = receiver;
         emit ReceiverSet(address(0), receiver);
+
+        // Set the maximum supply
+        if (maxSupply == 0) revert ZeroAmount();
+        MAX_SUPPLY = maxSupply;
     }
 
     /**
@@ -106,7 +112,7 @@ AccessControlUpgradeable
      * - Only addresses with DENY_LISTER_ROLE can call this function
      * - newReceiver cannot be the zero address
      */
-    function setReceiver(address newReceiver) public onlyRole(DENY_LISTER_ROLE) {
+    function setReceiver(address newReceiver) external onlyRole(DENY_LISTER_ROLE) {
         if (newReceiver == address(0)) revert ZeroAddress();
         address previousReceiver = authorizedReceiver;
         authorizedReceiver = newReceiver;
@@ -116,7 +122,7 @@ AccessControlUpgradeable
 
     /**
      * @dev Mints new tokens to the authorized receiver address
-     * @param amount The amount of tokens to mint (in 8 decimal places)
+     * @param amount The amount of tokens to mint
      * Requirements:
      * - Only addresses with MINTER_ROLE can call this function
      * - Contract must not be paused
@@ -125,7 +131,7 @@ AccessControlUpgradeable
      * - Authorized receiver must be set
      */
     function mint(address receiver, uint256 amount)
-    public
+    external
     onlyRole(MINTER_ROLE)
     whenNotPaused
     {
@@ -139,7 +145,7 @@ AccessControlUpgradeable
 
     /**
      * @dev Burns tokens from the caller's balance
-     * @param amount The amount of tokens to burn (in 8 decimal places)
+     * @param amount The amount of tokens to burn
      * Requirements:
      * - Only addresses with MINTER_ROLE can call this function
      * - Contract must not be paused
@@ -147,7 +153,7 @@ AccessControlUpgradeable
      * - Caller must have sufficient balance to burn
      */
     function burn(uint256 amount)
-    public
+    external
     onlyRole(MINTER_ROLE)
     whenNotPaused
     {
@@ -163,7 +169,7 @@ AccessControlUpgradeable
      * Requirements:
      * - Only addresses with DENY_LISTER_ROLE can call this function
      */
-    function pause() public onlyRole(DENY_LISTER_ROLE) {
+    function pause() external onlyRole(DENY_LISTER_ROLE) {
         _pause();
     }
 
@@ -172,7 +178,7 @@ AccessControlUpgradeable
      * Requirements:
      * - Only addresses with DENY_LISTER_ROLE can call this function
      */
-    function unpause() public onlyRole(DENY_LISTER_ROLE) {
+    function unpause() external onlyRole(DENY_LISTER_ROLE) {
         _unpause();
     }
 
@@ -184,7 +190,7 @@ AccessControlUpgradeable
      * - Accounts array cannot be empty
      * - Cannot add zero address to deny list
      */
-    function batchAddToDenyList(address[] memory accounts) public onlyRole(DENY_LISTER_ROLE) {
+    function batchAddToDenyList(address[] calldata accounts) external onlyRole(DENY_LISTER_ROLE) {
         if (accounts.length == 0) revert EmptyArray();
         
         for (uint256 i = 0; i < accounts.length; i++) {
@@ -205,7 +211,7 @@ AccessControlUpgradeable
      * - Only addresses with DENY_LISTER_ROLE can call this function
      * - Accounts array cannot be empty
      */
-    function batchRemoveFromDenyList(address[] memory accounts) public onlyRole(DENY_LISTER_ROLE) {
+    function batchRemoveFromDenyList(address[] calldata accounts) external onlyRole(DENY_LISTER_ROLE) {
         if (accounts.length == 0) revert EmptyArray();
         
         for (uint256 i = 0; i < accounts.length; i++) {
@@ -224,7 +230,7 @@ AccessControlUpgradeable
      * - Only addresses with DENY_LISTER_ROLE can call this function
      * - Cannot add zero address to deny list
      */
-    function addToDenyList(address account) public onlyRole(DENY_LISTER_ROLE) {
+    function addToDenyList(address account) external onlyRole(DENY_LISTER_ROLE) {
         if (account == address(0)) revert ZeroAddress();
 
         denyList[account] = true;
@@ -237,7 +243,7 @@ AccessControlUpgradeable
      * Requirements:
      * - Only addresses with DENY_LISTER_ROLE can call this function
      */
-    function removeFromDenyList(address account) public onlyRole(DENY_LISTER_ROLE) {
+    function removeFromDenyList(address account) external onlyRole(DENY_LISTER_ROLE) {
         denyList[account] = false;
         emit RemovedFromDenyList(account);
     }
@@ -251,7 +257,7 @@ AccessControlUpgradeable
      * - New minter cannot be zero address
      * - New minter cannot be the same as current minter
      */
-    function transferMinter(address newMinter) public onlyRole(MINTER_ROLE) {
+    function transferMinter(address newMinter) external onlyRole(MINTER_ROLE) {
         if (newMinter == address(0)) revert ZeroAddress();
         if (newMinter == msg.sender) revert SameValue();
 
@@ -274,7 +280,7 @@ AccessControlUpgradeable
      * - New deny lister cannot be zero address
      * - New deny lister cannot be the same as current deny lister
      */
-    function transferDenyLister(address newDenyLister) public onlyRole(DENY_LISTER_ROLE) {
+    function transferDenyLister(address newDenyLister) external onlyRole(DENY_LISTER_ROLE) {
         if (newDenyLister == address(0)) revert ZeroAddress();
         if (newDenyLister == msg.sender) revert SameValue();
 
@@ -311,14 +317,6 @@ AccessControlUpgradeable
     }
 
     /**
-     * @dev Returns the number of decimal places for the token
-     * @return The number of decimals (8, matching Bitcoin's precision)
-     */
-    function decimals() public view virtual override returns (uint8) {
-        return 8;
-    }
-
-    /**
      * @dev Checks if the contract supports a given interface
      * @param interfaceId The interface identifier to check
      * @return True if the interface is supported, false otherwise
@@ -337,6 +335,6 @@ AccessControlUpgradeable
      * @return The version string of the contract
      */
     function version() public pure returns (string memory) {
-        return "1.0.1";
+        return "1.0.0";
     }
 }
