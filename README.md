@@ -1,4 +1,4 @@
-# OKX xBTC:
+# OKX xBTC
 
 xBTC is a token implementation on the Sui blockchain that represents Bitcoin.
 
